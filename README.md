@@ -10,7 +10,6 @@
 </p>
 
 <p align="center">
-  <a href="docs/adr/0001-cross-platform-ai-deployment-architecture.md"><img src="https://img.shields.io/badge/架构规范-MADR%200001-blue.svg" alt="Architecture"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/开源协议-MIT-yellow.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/支持平台-macOS%20%7C%20Windows-brightgreen.svg" alt="Platform">
 </p>
@@ -198,13 +197,6 @@ install.bat
 
 ---
 
-## 8. 架构决策记录 (ADR)
-
-本项目遵循标准架构决策记录（Architecture Decision Records）：
-- [**ADR 0001: 跨平台 AI 驱动部署架构**](docs/adr/0001-cross-platform-ai-deployment-architecture.md)：记录本质复杂度与附带复杂度的划分、模板插值约束与双轨部署设计。
-
----
-
-## 9. 开源协议
+## 8. 开源协议
 
 本项目基于 [MIT License](LICENSE) 协议完全开源。

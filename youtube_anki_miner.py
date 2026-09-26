@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-YouTube Anki Vocabulary Miner & Study Pipeline
-Author: Lindy (CTO Architecture)
+Anki Context Miner - Vocabulary & Study Pipeline
+Author: Chase Yuan
 Function:
   1. YouTube URL -> Subtitle & Metadata Extraction (via Proxy & youtube_transcript_api)
   2. CEFR C1/C2 Advanced Vocabulary & Idiomatic Phrase Mining (via local agy)

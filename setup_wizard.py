@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Cross-Platform Setup Wizard and Physical Probe Doctor for anki-video-miner
-Part of Li Xiaolai MADR 0001 Architecture.
+Cross-Platform Setup Wizard and Physical Probe Doctor for anki-context-miner
 
 Usage:
     python3 setup_wizard.py                  # Interactive setup wizard
