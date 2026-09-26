@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configuration & Secrets (CRITICAL)
+config.json
+.env
+*.env
+
+# Logs and runtime caches
+*.log
+.DS_Store
+.config/
+audio_cache/
+
+# Local virtual environment
+.venv/
+venv/
+ENV/

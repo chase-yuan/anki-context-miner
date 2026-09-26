@@ -1,0 +1,25 @@
+{
+  "telegram": {
+    "bot_token": "YOUR_TELEGRAM_BOT_TOKEN_HERE",
+    "admin_user_id": 0,
+    "proxy_url": ""
+  },
+  "llm": {
+    "provider": "gemini",
+    "gemini_api_key": "",
+    "gemini_model": "gemini-2.5-flash",
+    "agy_fallback": true
+  },
+  "anki": {
+    "connect_url": "http://127.0.0.1:8765",
+    "deck_prefix": "YouTube",
+    "model_name": "Cloze",
+    "voice": "en-US-ChristopherNeural",
+    "auto_sync": true
+  },
+  "paths": {
+    "obsidian_vault": "",
+    "staging_file": "~/.config/anki_video_staging.json",
+    "known_words_file": "~/.config/english_known_words.txt"
+  }
+}
