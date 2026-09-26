@@ -23,6 +23,7 @@ import base64
 import hashlib
 import tempfile
 import shutil
+from pathlib import Path
 import edge_tts
 from datetime import datetime, timezone, timedelta
 from config_loader import get_config
