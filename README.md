@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/demo_telegram_flow.png" alt="Telegram 移动端工作流演示" width="520">
+  <img src="docs/images/demo_telegram_flow.gif" alt="Telegram 移动端工作流实机演示" width="520">
 </p>
 
 ---

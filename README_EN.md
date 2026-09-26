@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/demo_telegram_flow.png" alt="Telegram Mobile Workflow Demo" width="520">
+  <img src="docs/images/demo_telegram_flow.gif" alt="Telegram Mobile Workflow Live Demo" width="520">
 </p>
 
 ---
