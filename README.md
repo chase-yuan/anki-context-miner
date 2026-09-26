@@ -147,10 +147,13 @@ The system runs completely silently in the background:
 | User Message | Action Performed | Response |
 | :--- | :--- | :--- |
 | `https://youtube.com/watch?v=...` | Extracts video subtitles and runs C1/C2 lexicographical mining | Returns numbered candidates with IPA, POS, and Chinese definition |
+| `https://bilibili.com/video/BV...` | Extracts Bilibili subtitles/audio and generates study monograph | Returns lecture notes and saves to Obsidian |
+| `When considering the evolution...` (or `文本: [内容]`) | Mines C1/C2 vocabulary directly from text or article paragraph | Stages numbered candidates for Anki selection |
+| Drag & drop `.txt` or `.md` file | Parses text document and extracts high-register vocabulary | Stages candidates with document title metadata |
 | `1 3 5` or `all` or `前3个` | Instantly injects selected items into Anki with audio | Adds Cloze cards and triggers AnkiWeb cloud sync |
 | `把讲多巴胺的词存入anki` | Natural language selection via semantic intent agent | Identifies target items and injects directly |
-| `再帮我多挖几个地道习语` | Continues mining deeper idiomatic phrases from same video | Returns new non-overlapping candidate batch |
-| `刚才视频里讲的核心论据是什么？` | Discusses video transcript directly | Returns concise synthesis based on local transcript cache |
+| `再帮我多挖几个地道习语` | Continues mining deeper idiomatic phrases from same source | Returns new non-overlapping candidate batch |
+| `刚才内容里讲的核心论据是什么？` | Discusses transcript/article directly | Returns concise synthesis based on local content cache |
 | `/shot` | Captures primary Mac / Windows screen | Sends screenshot back to phone |
 | `/status` | Reads CPU, memory, and disk health | Returns hardware status summary |
 | `/sync` | Triggers manual AnkiWeb sync | Syncs collection to cloud |

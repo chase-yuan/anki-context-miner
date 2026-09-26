@@ -25,7 +25,7 @@ case "$ACTION" in
     <key>ProgramArguments</key>
     <array>
         <string>${PYTHON_BIN}</string>
-        <string>${REPO_DIR}/mac_tg_bot.py</string>
+        <string>${REPO_DIR}/tg_bot.py</string>
     </array>
     <key>WorkingDirectory</key>
     <string>${REPO_DIR}</string>

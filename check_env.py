@@ -219,7 +219,7 @@ def main():
     print(f"\n{BLUE}------------------------------------------------------{RESET}")
     if all_pass:
         print(f"{GREEN}[SUCCESS] All checks passed! System is ready to run:{RESET}")
-        print("  python3 mac_tg_bot.py\n")
+        print("  python3 tg_bot.py\n")
     else:
         print(f"{YELLOW}[ACTION REQUIRED] Please resolve the issues marked [FAIL] above.{RESET}\n")
 
