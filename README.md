@@ -15,6 +15,10 @@
   <img src="https://img.shields.io/badge/支持平台-macOS%20%7C%20Windows-brightgreen.svg" alt="Platform">
 </p>
 
+<p align="center">
+  <img src="docs/images/demo_telegram_flow.png" alt="Telegram 移动端工作流演示" width="520">
+</p>
+
 ---
 
 ## 1. 系统架构与全模态流转
@@ -181,6 +185,10 @@ install.bat
 - **深浅自适应**：通过 `@media (prefers-color-scheme: dark)` 与 `.nightMode` 原生自适应 iOS AnkiMobile 与 Android AnkiDroid 的纯黑暗黑主题；
 - **胶囊化容器**：例句与发音区域置于浅灰 `#f8fafc` 或深灰 `#27272a` 的微圆角区域内，摒弃粗暴的高饱和度线条与嵌套方框；
 - **零冗余装饰**：杜绝装饰性 Emoji 堆砌，完全依托字阶、字重与留白构建清晰认知层级。
+
+<p align="center">
+  <img src="docs/images/demo_anki_cards.png" alt="Anki 卡片深浅色排版效果" width="840">
+</p>
 
 ---
 
