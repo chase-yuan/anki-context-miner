@@ -1,12 +1,12 @@
 # Anki Context Miner
 
 <p align="center">
-  <b>Autonomous, Multimodal Context-Driven Vocabulary & Flashcard Engine for macOS & Windows</b><br>
-  <i>Extract advanced vocabulary, idiomatic collocations, and native neural audio from videos, articles, and documents via Telegram on your phone. Direct injection into Anki with instant AnkiWeb cloud sync.</i>
+  <b>Mobile-First Context Vocabulary Miner & Direct Anki Flashcard Sync Engine</b><br>
+  <i>Fling YouTube videos or English texts from your phone to Telegram. Glance for zero-pressure comprehension, or inject into Anki with a single phrase for spaced repetition anytime, anywhere.</i>
 </p>
 
 <p align="center">
-  <a href="README_EN.md"><b>English</b></a> | <a href="README.md">简体中文</a>
+  <a href="README.md">简体中文</a> | <a href="README_EN.md"><b>English</b></a>
 </p>
 
 <p align="center">
@@ -20,52 +20,76 @@
 
 ---
 
-## 1. System Architecture
+## 1. Why Anki Context Miner?
+
+When watching YouTube lectures, podcasts, or reading in-depth articles on your phone, you face four unavoidable frictions:
+
+1. **Broken Reading Flow**: Constantly jumping back and forth to dictionary apps shatters your immersion;
+2. **Fleeting Recall**: Looking up definitions without review means forgetting them within days;
+3. **Painful Card Creation**: Manually copying sentences on desktop Anki, hunting for phonetic IPA, downloading audio clips, and formatting cloze deletions is tedious and exhausting;
+4. **Cognitive Overload**: Most of the time, **you just want to understand the current content**, without feeling obligated to memorize every single unknown word.
+
+**Anki Context Miner** collapses this entire engineering chain into your Telegram chat window on your phone, offering **two flexible, zero-pressure modes**:
+
+- **Mode A · Zero-Pressure Glance (Instant Comprehension)**: When encountering an unfamiliar video or dense passage, simply fling the link or text to the Telegram bot. The bot instantly returns a high-signal lexical breakdown (phonetics, parts of speech, nuanced meanings, original sentence, and translation). Glance through it directly on your phone to grasp the material — zero obligation to memorize.
+- **Mode B · Selective Long-Term Immersion (One-Phrase Sync to Anki)**: When you spot high-value expressions or idioms you truly want to retain, simply reply `Add to Anki` or `1 3 5`. The bot automatically generates Cloze flashcards with native Microsoft Edge-TTS neural audio and syncs them to AnkiWeb. On your commute or during breaks, open Anki on your phone (iOS / Android) to review with spaced repetition (SRS).
+
+---
+
+## 2. Architecture & Dual-Track Workflow
 
 ```mermaid
 flowchart TD
-    subgraph "Mobile & Desktop Client"
-        A["Mobile / Desktop (Telegram)"] -->|"Share Video URL, Article Text, or Document"| B["Background Daemon (tg_bot.py)"]
+    subgraph "Mobile & Desktop Ingestion"
+        A["Mobile Browser / App<br>(YouTube Link / Article Text / Copied Snippet)"] -->|"Fling to Telegram Bot"| B["Background Daemon (tg_bot.py)"]
     end
 
-    subgraph "Core Mining & Analysis Engine"
-        B --> C{"Multimodal Gateway"}
-        C -->|"Video URLs (YouTube)"| D["Transcript Extraction & Timestamp Alignment"]
-        C -->|"Text Snippets / Documents (.txt / .md)"| E["Advanced Vocabulary & Context Mining"]
-        C -->|"Selection Commands (e.g. '1 3 5' / 'all')"| F["Deterministic Card Assembly (0.01s)"]
-        C -->|"Follow-up Queries / QA"| G["Multi-Engine LLM Dispatcher"]
+    subgraph "Context Mining & Lexical Synthesis"
+        B --> C{"Context Processing Gateway"}
+        C -->|"YouTube URL"| D["Subtitle Extraction & Timestamp Alignment"]
+        C -->|"Article / Text / Document"| E["C1/C2 Lexical Extraction & Nuance Mining"]
         D --> E
-        E --> H["Edge-TTS Neural Audio Synthesis (Word + Sentence)"]
+        E --> F["Return High-Density Summary to Telegram"]
     end
 
-    subgraph "Presentation & Storage Layer"
-        F --> I["AnkiConnect Direct Injection (127.0.0.1:8765)"]
-        H --> I
-        I --> J["Automatic AnkiWeb Cloud Sync"]
-        J --> K["Instant Availability on iPhone & Android Anki"]
+    subgraph "Zero-Pressure Dual Outcomes"
+        F --> G["【Mode A】Glance & Understand<br>(Zero cognitive burden, no cards created)"]
+        F -->|"【Mode B】Selective Sync<br>(Reply 'Add to Anki' / '1 3 5')"| H["Deterministic Card Assembly (0.01s)"]
+        H --> I["Microsoft Edge-TTS Dual Neural Audio Synthesis"]
+        I --> J["AnkiConnect Direct Injection (127.0.0.1:8765)"]
+        J --> K["Automatic AnkiWeb Cloud Sync"]
+        K --> L["Review on Phone Anytime (iOS / Android Anki)"]
     end
 ```
 
 ---
 
-## 2. Core Highlights
+## 3. Core Highlights
 
-- **Mobile-First Remote Workflow**: Send a video link or article excerpt from Telegram on your phone while commuting. When you open Anki on your phone or desktop, your flashcards and native audio are already synced.
+- **Seamless Mobile Companion (Zero Interruption)**:
+  Encounter unknown vocabulary or challenging arguments while watching videos or reading articles on your phone. Share or paste directly to Telegram without closing your app.
+- **Dual Learning Elasticity: Quick Glance vs. Selective Card Creation**:
+  - *Lightweight Scan*: Read through vocabulary meanings and sentence breakdowns directly in the bot's response without the pressure of forced memorization;
+  - *Selective Sync*: For expressions you genuinely want to master, reply with "Add to Anki" or specific indices (`1 3 5` / `all`) to inject them into Anki.
+- **High-Fidelity Automated Cards & Cloud Sync**:
+  Each card includes IPA phonetics, parts of speech, in-context example sentences, and dual-track Microsoft Edge-TTS neural pronunciation (isolated word + full sentence). Cards sync automatically to AnkiWeb for instant mobile review.
 - **Multimodal Context Ingestion**:
   - **Video Stream**: Subtitle and verbatim extraction for YouTube lectures, podcasts, and documentaries;
   - **Text Stream**: Direct forwarding of article excerpts, papers, and essays for instant lexical analysis;
   - **Document Stream**: Drag-and-drop `.txt` or `.md` files to automatically parse and extract high-register terms.
-- **Full Cross-Platform Parity**: Native background support for **macOS** (`launchd` daemon, Retina screen capture, caffeinate anti-sleep) and **Windows** (invisible background VBS runner, PowerShell high-DPI screenshot, Windows execution state anti-sleep).
+- **Minimalist Adaptive Typography**:
+  Built on Apple and Tailwind design tokens without nested borders or visual clutter. Automatically adapts to pure-black OLED dark mode with AAA contrast on AnkiMobile and AnkiDroid.
+- **Full Cross-Platform Parity**:
+  Native background support for **macOS** (`launchd` daemon, Retina screen capture, anti-sleep) and **Windows** (invisible background VBS runner, PowerShell high-DPI screenshot, system execution state anti-sleep).
 - **Dual-Track Zero-Friction Setup**:
-  - **Track 1 (AI Agent CLI)**: Log into your AI terminal (`codex`, `agy`, or `claude`), and the agent autonomously inspects your environment and installs the background service.
+  - **Track 1 (AI Agent CLI)**: Log into your AI terminal (`codex`, `agy`, or `claude`), and the agent autonomously inspects your environment and installs the background service;
   - **Track 2 (Native 1-Click)**: Run `./install.sh` (macOS/Linux) or double-click `install.bat` (Windows) for isolated virtual environment setup and step-by-step guidance.
-- **Universal LLM Flexibility**: Choose between major cloud REST APIs (Google Gemini, DeepSeek, OpenAI, Anthropic Claude) or local logged-in CLI agents (OpenAI Codex, Google Antigravity, Claude Code) with zero API keys required.
-- **Clean Responsive Typography**: Elegant, boxless design using native system font stacks. Automatically adapts between daylight clean mode and pure-black OLED dark mode with AAA contrast.
-- **Intelligent Vocabulary Calibration**: Filters out familiar everyday words and focuses on high-register expressions, deceptive idioms, phrasal collocations, and argumentative structures.
+- **Modern 2026 Frontier LLM Matrix**:
+  Preconfigured with current generation models (Gemini 3.8 Flash, DeepSeek V4.1-Flash, GPT-6 Luna, Claude Haiku 4.5). Supports cloud REST APIs as well as locally authenticated CLI tools (Codex, agy, Claude Code) with zero mandatory API keys.
 
 ---
 
-## 3. Supported LLM Engines
+## 4. Supported LLM Engines
 
 You can configure any of the following providers in `config.json` or through environment variables. The default strategy (`"provider": "auto"`) checks configured API keys first, then automatically falls back to your locally authenticated CLI tools.
 
@@ -81,35 +105,35 @@ You can configure any of the following providers in `config.json` or through env
 
 ---
 
-## 4. Quickstart & Deployment
+## 5. Quick Start & Setup
 
-### Prerequisites (Approx. 3 Minutes)
+### Prerequisites (~3 minutes)
 
 1. **Telegram Bot Credentials**:
-   - Talk to [@BotFather](https://t.me/botfather) on Telegram and send `/newbot` to get your **Bot Token**.
-   - Talk to [@userinfobot](https://t.me/userinfobot) on Telegram to get your numeric **User ID** (prevents unauthorized access).
-2. **Anki Desktop Setup**:
-   - Open Anki Desktop -> **Tools -> Add-ons -> Get Add-ons...**
-   - Install **AnkiConnect** (code: `2055492159`).
-   - Log into your free AnkiWeb account in Anki preferences and keep Anki running during initial setup.
+   - Message [@BotFather](https://t.me/botfather) on Telegram and send `/newbot` to get your **Bot Token**;
+   - Message [@userinfobot](https://t.me/userinfobot) on Telegram to get your numeric **User ID** (prevents unauthorized access).
+2. **Anki Desktop Configuration**:
+   - Open Anki on your computer $\to$ Menu: **Tools $\to$ Add-ons $\to$ Get Add-ons...**;
+   - Enter code `2055492159` to install **AnkiConnect**;
+   - Log into your AnkiWeb account under Anki Preferences, and keep Anki running during initial setup.
 
 ---
 
-### Track A: Autonomous AI Agent Deployment (Recommended)
+### Deployment Track A: Fully Autonomous AI Setup (Recommended)
 
-If you use an AI terminal assistant (**Google Antigravity**, **OpenAI Codex**, or **Claude Code**), run the following in your terminal:
+If you use a terminal AI assistant (**Google Antigravity**, **OpenAI Codex**, or **Claude Code**), run the matching command in the cloned directory:
 
 ```bash
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 
-# With Google Antigravity:
+# Using Google Antigravity:
 agy run AI_SETUP_PROMPT.md
 
-# With OpenAI Codex:
+# Using OpenAI Codex:
 codex exec "Deploy and configure this repository per AI_SETUP_PROMPT.md"
 
-# With Anthropic Claude Code:
+# Using Anthropic Claude Code:
 claude -p "Please configure and deploy this repo according to AI_SETUP_PROMPT.md"
 ```
 
@@ -117,55 +141,56 @@ The AI agent will strictly follow the [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) s
 
 ---
 
-### Track B: Native 1-Click Interactive Wizard
+### Deployment Track B: Native 1-Click Interactive Wizard
 
-If you prefer a direct script without an AI CLI:
+If you prefer native shell scripts:
 
-#### On macOS / Linux:
+#### macOS / Linux:
 ```bash
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 ./install.sh
 ```
 
-#### On Windows:
+#### Windows:
 ```cmd
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 install.bat
 ```
 
-The wizard will:
-1. Create an isolated `.venv` virtual environment (leaving your global system Python untouched).
-2. Install all required dependencies from `requirements.txt`.
-3. Interactively verify your Telegram credentials and API key with live network and AnkiConnect tests.
-4. Offer to register the auto-start background daemon.
+The installer will automatically:
+1. Create an isolated `.venv` environment to protect your global Python environment;
+2. Install all required dependencies from `requirements.txt`;
+3. Interactively record your tokens and verify connectivity with AnkiConnect;
+4. Register the background auto-start daemon.
 
 ---
 
-## 5. Background Service Management
+## 6. Background Service Management
 
-The system runs completely silently in the background:
+The system runs silently 24/7 in the background:
 
 ### macOS (`launchd`)
 - **Status check**: `python3 setup_wizard.py --check-only`
-- **Manual install**: `python3 setup_wizard.py --install-service`
-- **Logs**: `bot.log` and `bot_err.log` inside the repository directory.
+- **Reinstall service**: `python3 setup_wizard.py --install-service`
+- **Logs**: `bot.log` and `bot_err.log` in repository root
 
 ### Windows (Startup VBS + Task Scheduler)
-- **Automatic run**: The installer registers `anki_video_miner_hidden.vbs` in your Windows Startup folder (`shell:startup`). It launches on login with **zero black console window**.
-- **Manual run**: Double-click `run_bot.bat` in the repository directory.
+- **Auto-start**: Registered in `shell:startup` via `anki_video_miner_hidden.vbs` without pop-up black terminal windows;
+- **Manual start**: Double-click `run_bot.bat` in the repository root.
 
 ---
 
-## 6. Telegram Command Reference
+## 7. Telegram Command Reference
 
-| User Message | Action Performed | Response |
+| Message Sent | Action Performed | Bot Response |
 | :--- | :--- | :--- |
 | `https://youtube.com/watch?v=...` | Extracts video subtitles and runs lexical mining | Returns numbered candidates with IPA, POS, and definitions |
 | English text paragraph (or `text: [content]`) | Mines C1/C2 vocabulary directly from text or article paragraph | Stages numbered candidates for Anki selection |
 | Drag & drop `.txt` or `.md` file | Parses text document and extracts high-register vocabulary | Stages candidates with document title metadata |
-| `1 3 5` or `all` or `top 3` | Instantly injects selected items into Anki with audio | Adds Cloze cards and triggers AnkiWeb cloud sync |
+| **No action needed** | Glance through the bot's vocabulary breakdown | Immediate comprehension with zero obligation to create cards |
+| `Add to Anki` or `all` or `1 3 5` | Instantly injects selected items into Anki with neural audio | Adds Cloze cards and triggers AnkiWeb cloud sync |
 | `Save the words about dopamine` | Natural language selection via semantic intent agent | Identifies target items and injects directly |
 | `Mine more idiomatic phrases` | Continues mining deeper idiomatic phrases from same source | Returns new non-overlapping candidate batch |
 | `What was the core argument?` | Discusses transcript/article directly | Returns concise synthesis based on local content cache |
@@ -175,7 +200,7 @@ The system runs completely silently in the background:
 
 ---
 
-## 7. Card Styling & Visual Specifications
+## 8. Card Styling & Visual Specifications
 
 Cards generated by Anki Context Miner follow minimalist aesthetic principles:
 
@@ -196,6 +221,6 @@ Cards generated by Anki Context Miner follow minimalist aesthetic principles:
 
 ---
 
-## 8. License
+## 9. License
 
 This project is licensed under the [MIT License](LICENSE).
