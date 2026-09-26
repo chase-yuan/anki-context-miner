@@ -43,8 +43,28 @@ def load_config() -> Dict[str, Any]:
         tg["proxy_url"] = os.environ["HTTP_PROXY"]
 
     llm = config_data.setdefault("llm", {})
+    if os.environ.get("LLM_PROVIDER"):
+        llm["provider"] = os.environ["LLM_PROVIDER"]
     if os.environ.get("GEMINI_API_KEY"):
         llm["gemini_api_key"] = os.environ["GEMINI_API_KEY"]
+    if os.environ.get("OPENAI_API_KEY"):
+        llm["openai_api_key"] = os.environ["OPENAI_API_KEY"]
+    if os.environ.get("DEEPSEEK_API_KEY"):
+        llm["openai_api_key"] = os.environ["DEEPSEEK_API_KEY"]
+        if not llm.get("openai_base_url"):
+            llm["openai_base_url"] = "https://api.deepseek.com/v1"
+        if not llm.get("openai_model"):
+            llm["openai_model"] = "deepseek-chat"
+    if os.environ.get("OPENAI_BASE_URL"):
+        llm["openai_base_url"] = os.environ["OPENAI_BASE_URL"]
+    if os.environ.get("OPENAI_MODEL"):
+        llm["openai_model"] = os.environ["OPENAI_MODEL"]
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        llm["anthropic_api_key"] = os.environ["ANTHROPIC_API_KEY"]
+    elif os.environ.get("CLAUDE_API_KEY"):
+        llm["anthropic_api_key"] = os.environ["CLAUDE_API_KEY"]
+    if os.environ.get("ANTHROPIC_MODEL"):
+        llm["anthropic_model"] = os.environ["ANTHROPIC_MODEL"]
 
     anki = config_data.setdefault("anki", {})
     if os.environ.get("ANKI_CONNECT_URL"):

@@ -5,10 +5,19 @@
     "proxy_url": ""
   },
   "llm": {
-    "provider": "gemini",
+    "provider": "auto",
     "gemini_api_key": "",
     "gemini_model": "gemini-2.5-flash",
-    "agy_fallback": true
+    "openai_api_key": "",
+    "openai_base_url": "https://api.openai.com/v1",
+    "openai_model": "gpt-4o-mini",
+    "anthropic_api_key": "",
+    "anthropic_model": "claude-3-5-haiku-20241022",
+    "cli_paths": {
+      "codex": "",
+      "agy": "",
+      "claude": ""
+    }
   },
   "anki": {
     "connect_url": "http://127.0.0.1:8765",

@@ -476,54 +476,12 @@ Example output item:
 }}
 """
 
-    output = None
-    last_err = None
+    from llm_client import call_llm
 
-    # Priority 1: Gemini API via official REST endpoint (zero local binary dependency)
-    api_key = CONFIG.get("llm", {}).get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        try:
-            model = CONFIG.get("llm", {}).get("gemini_model") or "gemini-2.5-flash"
-            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-            req_body = {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": 0.2,
-                    "responseMimeType": "application/json"
-                }
-            }
-            req_data = json.dumps(req_body).encode("utf-8")
-            req = urllib.request.Request(endpoint, data=req_data, headers={"Content-Type": "application/json"})
-            opener = urllib.request.build_opener()
-            if PROXY_URL:
-                opener.add_handler(urllib.request.ProxyHandler({"http": PROXY_URL, "https": PROXY_URL}))
-            with opener.open(req, timeout=90) as resp:
-                resp_json = json.loads(resp.read().decode("utf-8"))
-                output = resp_json["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception as exc:
-            last_err = exc
-
-    # Priority 2: Local Antigravity CLI ('agy') if available
-    if not output and CONFIG.get("llm", {}).get("agy_fallback", True):
-        agy_bin = shutil.which("agy") or ("/opt/homebrew/bin/agy" if os.path.exists("/opt/homebrew/bin/agy") else None)
-        if agy_bin:
-            try:
-                cmd = [agy_bin, "--dangerously-skip-permissions", "-p", prompt]
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-                if res.returncode == 0 and res.stdout.strip():
-                    output = res.stdout.strip()
-                elif res.stderr:
-                    last_err = Exception(f"agy error: {res.stderr.strip()[:200]}")
-            except Exception as exc:
-                last_err = exc
-
-    if not output:
-        msg = "AI 词汇提炼失败: 未检测到可用的 LLM 推理引擎。"
-        if not api_key:
-            msg += "\n请在 config.json 或环境变量中配置 GEMINI_API_KEY，或者安装 Antigravity CLI ('agy')。"
-        if last_err:
-            msg += f"\n底层错误: {last_err}"
-        raise RuntimeError(msg)
+    try:
+        output = call_llm(prompt, json_mode=True)
+    except Exception as exc:
+        raise RuntimeError(f"AI 词汇提炼失败: {exc}")
 
     raw_vocab = parse_c1_c2_json_robust(output)
     if exclude_words:

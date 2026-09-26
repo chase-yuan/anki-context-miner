@@ -435,42 +435,19 @@ def run_preview_engine(target_vid: str, user_query: str = None):
     return res.stdout, res.stderr, res.returncode
 
 
-def run_general_agy(prompt_text: str) -> str:
-    agy_bin = shutil.which("agy") or ("/opt/homebrew/bin/agy" if os.path.exists("/opt/homebrew/bin/agy") else None)
-    if not agy_bin:
-        return "[提示] 未检测到本地 agy 智能体命令行工具。"
-    cmd = [
-        agy_bin,
-        "--dangerously-skip-permissions",
-        "-p",
-        prompt_text,
-    ]
-    env = os.environ.copy()
-    env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:" + env.get("PATH", "")
-    target_cwd = CONFIG.get("paths", {}).get("obsidian_vault") or str(REPO_DIR)
-    if not os.path.isdir(target_cwd):
-        target_cwd = str(REPO_DIR)
+def run_general_llm(prompt_text: str) -> str:
+    from llm_client import call_llm
     try:
-        res = subprocess.run(
-            cmd,
-            cwd=target_cwd,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            env=env,
-        )
-        output = res.stdout.strip()
-        if not output and res.stderr:
-            output = res.stderr.strip()
-        return output or "（助手未返回文本内容）"
+        ans = call_llm(prompt_text)
+        return ans or "（助手未返回文本内容）"
     except Exception as e:
-        return f"[错误] 调用本地终端助手异常: {e}"
+        return f"[错误] 调用 LLM 推理引擎异常: {e}"
 
 
 def dispatch_semantic_intent(user_text: str, capsule: dict = None) -> dict:
-    """通过 Antigravity 智能体进行上下文感知与高精度语义意图调度"""
+    """通过配置的 LLM 引擎进行上下文感知与高精度语义意图调度"""
     if not capsule:
-        return {"intent": "general_chat", "answer": run_general_agy(user_text)}
+        return {"intent": "general_chat", "answer": run_general_llm(user_text)}
 
     prompt = f"""你是一个运行在 Mac 本地的高精度语义意图识别与执行调度器。
 用户正在 Telegram 上通过移动端与你交互。
@@ -499,31 +476,9 @@ def dispatch_semantic_intent(user_text: str, capsule: dict = None) -> dict:
 3. query_video：用户询问或讨论当前视频的具体内容、作者观点、核心论据（如「这个视频讲了什么？」、「作者提到的4步法具体是什么？」、「作者怎么解释多巴胺机制的？」）。如果本地有字幕文件，请直接结合内容给出详实解答并在 answer 中返回。
 4. general_chat：用户进行与该视频内容无关的通用提问、系统操作、询问使用方法（如「我要是想写入anki怎么做？」、「机器人没有智能吗？」、「用消防总工考考我」）。直接在 answer 中给予精准、无谄媚、实质性的解答。
 """
-    agy_bin = shutil.which("agy") or ("/opt/homebrew/bin/agy" if os.path.exists("/opt/homebrew/bin/agy") else None)
-    if not agy_bin:
-        return {"intent": "general_chat", "answer": "[提示] 未检测到本地 agy 智能体命令行工具。"}
-    cmd = [
-        agy_bin,
-        "--dangerously-skip-permissions",
-        "-p",
-        prompt
-    ]
-    env = os.environ.copy()
-    env["PATH"] = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:" + env.get("PATH", "")
-    target_cwd = CONFIG.get("paths", {}).get("obsidian_vault") or str(REPO_DIR)
-    if not os.path.isdir(target_cwd):
-        target_cwd = str(REPO_DIR)
-    stdout = ""
+    from llm_client import call_llm
     try:
-        res = subprocess.run(
-            cmd,
-            cwd=target_cwd,
-            capture_output=True,
-            text=True,
-            timeout=120,
-            env=env
-        )
-        stdout = res.stdout.strip()
+        stdout = call_llm(prompt, json_mode=True)
         payload = extract_json_payload(stdout)
         if payload and isinstance(payload, dict) and "intent" in payload:
             return payload
@@ -531,7 +486,7 @@ def dispatch_semantic_intent(user_text: str, capsule: dict = None) -> dict:
         logger.error(f"Semantic dispatch error: {e}")
 
     # 容错降级
-    fallback_ans = stdout or run_general_agy(user_text)
+    fallback_ans = run_general_llm(user_text)
     return {"intent": "general_chat", "answer": fallback_ans}
 
 
@@ -842,7 +797,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         stop_typing.clear()
         typing_task = asyncio.create_task(keep_typing())
-        fallback_reply = await loop.run_in_executor(None, lambda: run_general_agy(text))
+        fallback_reply = await loop.run_in_executor(None, lambda: run_general_llm(text))
         stop_typing.set()
         await typing_task
         await send_long_message(update.message, fallback_reply)

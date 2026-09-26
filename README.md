@@ -14,7 +14,7 @@ flowchart TD
     B --> C{"Hierarchical Gateway"}
     C -->|"Direct URL"| D["Video Subtitle & Metadata Extraction"]
     C -->|"Selection (e.g. '1 3 5' / 'all')"| E["Instant Deterministic Filter (0.01s)"]
-    C -->|"Natural Speech / Questions"| F["LLM Semantic Dispatcher (Gemini / agy)"]
+    C -->|"Natural Speech / Questions"| F["Multi-Engine LLM Dispatcher (CLI or REST API)"]
     D --> G["CEFR C1/C2 Lexicographical Mining"]
     G --> H["Edge-TTS Neural Voice Synthesis (Word + Sentence Audio)"]
     E --> I["AnkiConnect Direct Injection (127.0.0.1:8765)"]
@@ -28,13 +28,29 @@ flowchart TD
 ## 2. Core Highlights
 
 - **Mobile Remote Workflow**: Send a video link from Telegram on your phone while commuting. When you arrive home or open Anki, your curated flashcards and native audio are already synced.
-- **Zero API Lock-in**: Powered by free Google Gemini API (or local Antigravity `agy` CLI), free Edge-TTS neural speech synthesis, and local AnkiConnect.
+- **Universal LLM Flexibility**: Choose between direct cloud REST APIs (Google Gemini, DeepSeek, OpenAI, Anthropic Claude) or local logged-in CLI agents (OpenAI Codex, Google Antigravity, Claude Code) with zero API keys required.
 - **Cognitive Hygiene & Design Tokens**: 100% boxless, tokenized Apple/Tailwind Slate typography. Automatically adapts between daytime light mode and nighttime pure black OLED dark mode (AAA contrast ratio).
-- **CEFR C1/C2 Difficulty Calibration**: Explicitly filters out familiar everyday B1/B2 words and focuses on polysemy (熟词僻义), deceptive idioms (欺骗性习语), phrasal collocations, and argumentative syntactic frames.
+- **CEFR C1/C2 Difficulty Calibration**: Explicitly filters out familiar everyday B1/B2 words and focuses on polysemy, deceptive idioms, phrasal collocations, and argumentative syntactic frames.
 
 ---
 
-## 3. Quickstart (5-Minute Setup)
+## 3. Supported LLM Engines
+
+You can configure any of the following providers in `config.json` or through environment variables. By default (`"provider": "auto"`), the system checks your active API keys first, and automatically falls back to your local logged-in CLI tools.
+
+| Provider | Type | Setup Requirements | Default Model |
+| :--- | :--- | :--- | :--- |
+| **Google Gemini API** | Cloud REST | Set `GEMINI_API_KEY` (Free at Google AI Studio) | `gemini-2.5-flash` |
+| **DeepSeek API** | Cloud REST | Set `DEEPSEEK_API_KEY` (`https://api.deepseek.com/v1`) | `deepseek-chat` |
+| **OpenAI API** | Cloud REST | Set `OPENAI_API_KEY` | `gpt-4o-mini` |
+| **Claude API** | Cloud REST | Set `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
+| **OpenAI Codex CLI** | Local CLI | Run `codex login` (No API key needed) | User default profile |
+| **Antigravity CLI (agy)** | Local CLI | Installed via Antigravity (No API key needed) | Default workspace model |
+| **Claude Code CLI** | Local CLI | Run `claude login` (No API key needed) | Default Claude session |
+
+---
+
+## 4. Quickstart (5-Minute Setup)
 
 ### Step 1: Clone & Install Dependencies
 
@@ -74,10 +90,10 @@ Edit `config.json` with your credentials:
     "proxy_url": ""
   },
   "llm": {
-    "provider": "gemini",
-    "gemini_api_key": "AIzaSy...",
-    "gemini_model": "gemini-2.5-flash",
-    "agy_fallback": true
+    "provider": "auto",
+    "gemini_api_key": "",
+    "openai_api_key": "",
+    "anthropic_api_key": ""
   },
   "anki": {
     "connect_url": "http://127.0.0.1:8765",
@@ -90,14 +106,13 @@ Edit `config.json` with your credentials:
 ```
 
 > [!TIP]
-> - Get a free Telegram Bot Token from [@BotFather](https://t.me/botfather).
-> - Get your Telegram User ID from [@userinfobot](https://t.me/userinfobot).
-> - Get a free Google Gemini API Key from [Google AI Studio](https://aistudio.google.com/).
-> - If you are in mainland China, set `"proxy_url": "http://127.0.0.1:7897"` (matching your local clash/v2ray port).
+> - **Telegram Credentials**: Obtain your bot token from [@BotFather](https://t.me/botfather) and your numeric user ID from [@userinfobot](https://t.me/userinfobot).
+> - **Zero-Key Mode**: If you are already logged into Codex (`codex login`), Claude Code (`claude login`), or Antigravity (`agy`) on your Mac, leave `llm.gemini_api_key` empty! The doctor will auto-detect your local credentials.
+> - **Proxy Configuration**: If you are in mainland China, set `"proxy_url": "http://127.0.0.1:7897"` (matching your local clash/v2ray port).
 
 ### Step 4: Run the Environment Doctor
 
-Verify all dependencies, Anki connection, and tokens with one command:
+Verify all dependencies, Anki connection, and LLM providers with one command:
 
 ```bash
 python3 check_env.py
@@ -126,7 +141,7 @@ To manage the daemon:
 
 ---
 
-## 4. Telegram Usage Commands
+## 5. Telegram Usage Commands
 
 | User Message | Action Performed | Response |
 | :--- | :--- | :--- |
@@ -141,7 +156,7 @@ To manage the daemon:
 
 ---
 
-## 5. Mobile Dark Mode & Typography Specification
+## 6. Mobile Dark Mode & Typography Specification
 
 Cards generated by Anki Video Miner follow **Aesthetic Principle Zero**:
 
@@ -152,6 +167,6 @@ Cards generated by Anki Video Miner follow **Aesthetic Principle Zero**:
 
 ---
 
-## 6. License
+## 7. License
 
 This project is licensed under the [MIT License](LICENSE).

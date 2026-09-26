@@ -405,11 +405,11 @@ def answer_with_ai(meta, full_text, user_query):
 2. 切中本质：讲透物理因果链与工程实操/排障逻辑，严禁套话废话。
 3. 篇幅：控制在 300-500 字，重点突出，适合手机屏幕与桌面阅读。
 """
-    cmd = ["/opt/homebrew/bin/agy", "--disable-slash-commands", "-p", prompt]
+    from llm_client import call_llm
     try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
-        if res.returncode == 0 and res.stdout.strip():
-            return res.stdout.strip()
+        ans = call_llm(prompt)
+        if ans and ans.strip():
+            return ans.strip()
     except Exception:
         pass
     return None

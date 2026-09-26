@@ -134,21 +134,55 @@ def check_anki_connect(url: str = "http://127.0.0.1:8765") -> bool:
 
 
 def check_llm_readiness(cfg: dict) -> bool:
-    key = cfg.get("llm", {}).get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
-    if key:
-        print_status("LLM: Gemini API Key", True, f"Configured ({key[:6]}...)")
-        return True
+    from llm_client import find_executable
+    found_engines = []
 
-    agy = shutil.which("agy") or ("/opt/homebrew/bin/agy" if os.path.exists("/opt/homebrew/bin/agy") else None)
+    # 1. REST APIs
+    gemini_key = cfg.get("llm", {}).get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        found_engines.append(("Gemini REST API", f"Key: {gemini_key[:6]}..."))
+
+    openai_key = (
+        cfg.get("llm", {}).get("openai_api_key")
+        or os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("DEEPSEEK_API_KEY")
+    )
+    if openai_key:
+        base = cfg.get("llm", {}).get("openai_base_url") or os.environ.get("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+        found_engines.append(("OpenAI/DeepSeek API", f"Endpoint: {base}"))
+
+    claude_key = (
+        cfg.get("llm", {}).get("anthropic_api_key")
+        or os.environ.get("ANTHROPIC_API_KEY")
+        or os.environ.get("CLAUDE_API_KEY")
+    )
+    if claude_key:
+        found_engines.append(("Claude REST API", f"Key: {claude_key[:6]}..."))
+
+    # 2. Local CLIs
+    cli_cfg = cfg.get("llm", {}).get("cli_paths", {})
+    codex = find_executable("codex", cli_cfg.get("codex"))
+    if codex:
+        found_engines.append(("Codex CLI", f"Available at {codex}"))
+
+    agy = find_executable("agy", cli_cfg.get("agy"))
     if agy:
-        print_status("LLM: Antigravity CLI", True, f"Available at {agy}")
+        found_engines.append(("Antigravity CLI", f"Available at {agy}"))
+
+    claude_cli = find_executable("claude", cli_cfg.get("claude"))
+    if claude_cli:
+        found_engines.append(("Claude Code CLI", f"Available at {claude_cli}"))
+
+    if found_engines:
+        for name, detail in found_engines:
+            print_status(f"LLM: {name}", True, detail)
         return True
 
     print_status(
         "LLM Engine",
         False,
-        "No API key or agy CLI detected",
-        "Add gemini_api_key to config.json (free at https://ai.google.dev/) or install agy"
+        "No API key or CLI detected",
+        "Configure GEMINI_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY or install codex / agy / claude"
     )
     return False
 
