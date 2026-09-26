@@ -69,15 +69,15 @@ flowchart TD
 
 系统在 `config.json` 或环境变量中支持配置以下服务商。默认采用 `"provider": "auto"` 自动回退策略：优先使用配置的 API Key，若无则自动调用本地已授权的 CLI 终端工具。
 
-| 引擎名称 | 类型 | 配置要求 | 默认模型 |
+| 引擎名称 | 类型 | 配置要求 | 默认与推荐模型 |
 | :--- | :--- | :--- | :--- |
-| **Google Gemini API** | 云端 REST | 配置 `GEMINI_API_KEY`（可在 Google AI Studio 免费申请） | `gemini-2.5-flash` |
-| **DeepSeek API** | 云端 REST | 配置 `DEEPSEEK_API_KEY`（兼容 OpenAI 规范） | `deepseek-chat` |
-| **OpenAI API** | 云端 REST | 配置 `OPENAI_API_KEY` | `gpt-4o-mini` |
-| **Anthropic Claude API**| 云端 REST | 配置 `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
-| **OpenAI Codex CLI** | 本地 CLI | 执行 `codex login`（无需 API Key） | 用户默认配置 |
-| **Antigravity CLI (agy)**| 本地 CLI | 安装 Antigravity（无需 API Key） | 当前工作区默认模型 |
-| **Claude Code CLI** | 本地 CLI | 执行 `claude login`（无需 API Key） | 默认 Claude 会话 |
+| **Google Gemini API** | 云端 REST | 配置 `GEMINI_API_KEY`（可在 Google AI Studio 申请） | `gemini-3.8-flash`（亦兼容 `gemini-3.5-flash-lite` / `gemini-2.5-flash`） |
+| **DeepSeek API** | 云端 REST | 配置 `DEEPSEEK_API_KEY`（兼容 OpenAI 规范） | `deepseek-flash`（V4.1-Flash，亦兼容 `deepseek-v4-pro` / `deepseek-chat`） |
+| **OpenAI API** | 云端 REST | 配置 `OPENAI_API_KEY` | `gpt-6-luna`（亦兼容 `o4-mini` / `gpt-5.5` / `gpt-4o-mini`） |
+| **Anthropic Claude API**| 云端 REST | 配置 `ANTHROPIC_API_KEY` | `claude-haiku-4-5`（亦兼容 `claude-sonnet-5` / `claude-3-5-haiku`） |
+| **OpenAI Codex CLI** | 本地 CLI | 执行 `codex login`（无需 API Key） | 本机默认授权配置（如 GPT-6 / Codex 默认模型） |
+| **Antigravity CLI (agy)**| 本地 CLI | 安装 Antigravity（无需 API Key） | 当前工作区默认模型（如 Gemini 3.8 / Pro） |
+| **Claude Code CLI** | 本地 CLI | 执行 `claude login`（无需 API Key） | 默认 Claude 会话（如 Claude Sonnet 5） |
 
 ---
 

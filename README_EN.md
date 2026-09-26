@@ -69,15 +69,15 @@ flowchart TD
 
 You can configure any of the following providers in `config.json` or through environment variables. The default strategy (`"provider": "auto"`) checks configured API keys first, then automatically falls back to your locally authenticated CLI tools.
 
-| Engine | Type | Requirements | Default Model |
+| Engine | Type | Requirements | Default & Recommended Models |
 | :--- | :--- | :--- | :--- |
-| **Google Gemini API** | Cloud REST | Set `GEMINI_API_KEY` (Free at Google AI Studio) | `gemini-2.5-flash` |
-| **DeepSeek API** | Cloud REST | Set `DEEPSEEK_API_KEY` (OpenAI-compatible) | `deepseek-chat` |
-| **OpenAI API** | Cloud REST | Set `OPENAI_API_KEY` | `gpt-4o-mini` |
-| **Anthropic Claude API**| Cloud REST | Set `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
-| **OpenAI Codex CLI** | Local CLI | Run `codex login` (No API key needed) | Default user profile |
-| **Antigravity CLI (agy)**| Local CLI | Installed via Antigravity (No API key needed) | Default workspace model |
-| **Claude Code CLI** | Local CLI | Run `claude login` (No API key needed) | Default Claude session |
+| **Google Gemini API** | Cloud REST | Set `GEMINI_API_KEY` (Google AI Studio) | `gemini-3.8-flash` (also supports `gemini-3.5-flash-lite` / `gemini-2.5-flash`) |
+| **DeepSeek API** | Cloud REST | Set `DEEPSEEK_API_KEY` (OpenAI-compatible) | `deepseek-flash` (V4.1-Flash, also supports `deepseek-v4-pro` / `deepseek-chat`) |
+| **OpenAI API** | Cloud REST | Set `OPENAI_API_KEY` | `gpt-6-luna` (also supports `o4-mini` / `gpt-5.5` / `gpt-4o-mini`) |
+| **Anthropic Claude API**| Cloud REST | Set `ANTHROPIC_API_KEY` | `claude-haiku-4-5` (also supports `claude-sonnet-5` / `claude-3-5-haiku`) |
+| **OpenAI Codex CLI** | Local CLI | Run `codex login` (No API key needed) | Default environment profile (e.g. GPT-6 / Codex default) |
+| **Antigravity CLI (agy)**| Local CLI | Installed via Antigravity (No API key needed) | Default workspace model (e.g. Gemini 3.8 / Pro) |
+| **Claude Code CLI** | Local CLI | Run `claude login` (No API key needed) | Default Claude session (e.g. Claude Sonnet 5) |
 
 ---
 

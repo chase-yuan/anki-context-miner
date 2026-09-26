@@ -55,7 +55,7 @@ def load_config() -> Dict[str, Any]:
         if not llm.get("openai_base_url"):
             llm["openai_base_url"] = "https://api.deepseek.com/v1"
         if not llm.get("openai_model"):
-            llm["openai_model"] = "deepseek-chat"
+            llm["openai_model"] = "deepseek-flash"
     if os.environ.get("OPENAI_BASE_URL"):
         llm["openai_base_url"] = os.environ["OPENAI_BASE_URL"]
     if os.environ.get("OPENAI_MODEL"):

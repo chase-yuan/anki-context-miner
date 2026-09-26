@@ -342,7 +342,7 @@ def main():
                 cfg["llm"]["openai_api_key"] = user_key
                 if active_provider == "deepseek":
                     cfg["llm"].setdefault("openai_base_url", "https://api.deepseek.com/v1")
-                    cfg["llm"].setdefault("openai_model", "deepseek-chat")
+                    cfg["llm"].setdefault("openai_model", "deepseek-flash")
             elif active_provider == "claude":
                 cfg["llm"]["anthropic_api_key"] = user_key
 

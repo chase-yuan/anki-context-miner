@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Multi-Engine LLM Client for Anki Video Miner.
+Multi-Engine LLM Client for Anki Context Miner.
 Supports:
 1. REST APIs (Zero local dependencies):
-   - Google Gemini REST API (gemini-2.5-flash)
-   - OpenAI & OpenAI-Compatible REST APIs (DeepSeek, OpenRouter, Ollama, Moonshot, etc.)
-   - Anthropic Claude REST API (claude-3-5-haiku, claude-3-5-sonnet)
+   - Google Gemini REST API (gemini-3.8-flash, gemini-3.5-flash-lite)
+   - OpenAI & OpenAI-Compatible REST APIs (DeepSeek deepseek-flash, OpenAI gpt-6-luna, OpenRouter, Ollama, etc.)
+   - Anthropic Claude REST API (claude-haiku-4-5, claude-sonnet-5)
 2. Local Logged-in CLIs (Zero API key needed if logged in locally):
    - OpenAI Codex CLI (`codex exec`)
    - Google Antigravity CLI (`agy -p`)
@@ -76,7 +76,7 @@ class LLMClient:
         if not api_key:
             raise ValueError("GEMINI_API_KEY not configured")
 
-        model = self.llm_cfg.get("gemini_model") or "gemini-2.5-flash"
+        model = self.llm_cfg.get("gemini_model") or "gemini-3.8-flash"
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
 
         body: Dict[str, Any] = {
@@ -119,7 +119,7 @@ class LLMClient:
         model = (
             self.llm_cfg.get("openai_model")
             or os.environ.get("OPENAI_MODEL")
-            or ("deepseek-chat" if "deepseek" in base_url.lower() else "gpt-4o-mini")
+            or ("deepseek-flash" if "deepseek" in base_url.lower() else "gpt-6-luna")
         )
 
         messages = []
@@ -162,7 +162,7 @@ class LLMClient:
             raise ValueError("ANTHROPIC_API_KEY not configured")
 
         endpoint = "https://api.anthropic.com/v1/messages"
-        model = self.llm_cfg.get("anthropic_model") or "claude-3-5-haiku-20241022"
+        model = self.llm_cfg.get("anthropic_model") or "claude-haiku-4-5"
 
         body: Dict[str, Any] = {
             "model": model,
