@@ -66,6 +66,20 @@ def load_config() -> Dict[str, Any]:
     if os.environ.get("ANTHROPIC_MODEL"):
         llm["anthropic_model"] = os.environ["ANTHROPIC_MODEL"]
 
+    # Map universal api_key to provider-specific key if not already defined
+    universal_key = llm.get("api_key")
+    if universal_key:
+        provider = llm.get("provider", "gemini").lower()
+        if provider == "gemini" and not llm.get("gemini_api_key"):
+            llm["gemini_api_key"] = universal_key
+        elif provider in ["openai", "deepseek"] and not llm.get("openai_api_key"):
+            llm["openai_api_key"] = universal_key
+            if provider == "deepseek" and not llm.get("openai_base_url"):
+                llm["openai_base_url"] = "https://api.deepseek.com/v1"
+                llm.setdefault("openai_model", "deepseek-chat")
+        elif provider == "claude" and not llm.get("anthropic_api_key"):
+            llm["anthropic_api_key"] = universal_key
+
     anki = config_data.setdefault("anki", {})
     if os.environ.get("ANKI_CONNECT_URL"):
         anki["connect_url"] = os.environ["ANKI_CONNECT_URL"]

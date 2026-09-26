@@ -128,7 +128,12 @@ def probe_llm_backend(config: dict) -> bool:
             print(f"[WARN] Local LLM CLI ({provider}): Not found in PATH.")
             return False
 
-    api_key = llm_cfg.get("api_key") or os.environ.get(f"{provider.upper()}_API_KEY")
+    api_key = (
+        llm_cfg.get(f"{provider}_api_key")
+        or (llm_cfg.get("anthropic_api_key") if provider == "claude" else None)
+        or llm_cfg.get("api_key")
+        or os.environ.get(f"{provider.upper()}_API_KEY")
+    )
     if not api_key or "YOUR_" in api_key:
         print(f"[WARN] LLM Provider ({provider}): API Key not configured.")
         return False
@@ -320,11 +325,27 @@ def main():
     if user_provider:
         cfg.setdefault("llm", {})["provider"] = user_provider
 
-    if cfg.get("llm", {}).get("provider") not in ["codex", "agy", "claude"]:
-        current_key = cfg.get("llm", {}).get("api_key", "")
-        user_key = input("Enter LLM API Key (press Enter to keep current): ").strip()
+    active_provider = cfg.get("llm", {}).get("provider", "gemini").lower()
+    if active_provider not in ["codex", "agy", "claude"]:
+        current_key = (
+            cfg.get("llm", {}).get("api_key")
+            or cfg.get("llm", {}).get(f"{active_provider}_api_key")
+            or (cfg.get("llm", {}).get("anthropic_api_key") if active_provider == "claude" else "")
+            or ""
+        )
+        prompt_txt = f"Enter LLM API Key for '{active_provider}' (press Enter to keep current): "
+        user_key = input(prompt_txt).strip()
         if user_key:
             cfg.setdefault("llm", {})["api_key"] = user_key
+            if active_provider == "gemini":
+                cfg["llm"]["gemini_api_key"] = user_key
+            elif active_provider in ["openai", "deepseek"]:
+                cfg["llm"]["openai_api_key"] = user_key
+                if active_provider == "deepseek":
+                    cfg["llm"].setdefault("openai_base_url", "https://api.deepseek.com/v1")
+                    cfg["llm"].setdefault("openai_model", "deepseek-chat")
+            elif active_provider == "claude":
+                cfg["llm"]["anthropic_api_key"] = user_key
 
     save_config(cfg)
 

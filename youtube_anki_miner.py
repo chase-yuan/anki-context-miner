@@ -24,6 +24,7 @@ import hashlib
 import tempfile
 import shutil
 from pathlib import Path
+from typing import Tuple, Optional, Dict, List, Any
 import edge_tts
 from datetime import datetime, timezone, timedelta
 from config_loader import get_config
@@ -194,9 +195,12 @@ def fetch_transcript(video_id):
     max_retries = 2
     transcript_list = None
     for attempt in range(max_retries + 1):
-        ytt = YouTubeTranscriptApi()
         try:
-            transcript_list = ytt.list(video_id)
+            if hasattr(YouTubeTranscriptApi, "list_transcripts"):
+                transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            else:
+                ytt = YouTubeTranscriptApi()
+                transcript_list = ytt.list(video_id)
             break
         except (RequestBlocked, IpBlocked) as e:
             if attempt < max_retries and try_rotate_clash_node():
@@ -528,6 +532,60 @@ def ensure_anki_running():
     return False
 
 
+def resolve_cloze_model_and_fields(preferred_model: str = None) -> Tuple[str, str, str]:
+    """
+    Dynamically resolve Cloze note type and field names via AnkiConnect.
+    Seamlessly adapts to English Anki ('Cloze': Text / Back Extra) and Chinese Anki ('填空题': 文字 / 背面额外内容).
+    Returns: (model_name, text_field_name, back_extra_field_name)
+    """
+    target_model = preferred_model or ANKI_MODEL_NAME or "Cloze"
+    default_res = (target_model, "Text", "Back Extra")
+
+    try:
+        models_res = anki_request({"action": "modelNames", "version": 6}, timeout=3.0)
+        available_models = models_res.get("result", [])
+    except Exception:
+        return default_res
+
+    if not available_models:
+        return default_res
+
+    chosen_model = None
+    if target_model in available_models:
+        chosen_model = target_model
+    elif "Cloze" in available_models:
+        chosen_model = "Cloze"
+    elif "填空题" in available_models:
+        chosen_model = "填空题"
+    else:
+        for m in available_models:
+            if "cloze" in m.lower() or "填空" in m:
+                chosen_model = m
+                break
+
+    if not chosen_model:
+        chosen_model = target_model
+
+    try:
+        fields_res = anki_request({"action": "modelFieldNames", "version": 6, "params": {"modelName": chosen_model}}, timeout=3.0)
+        fields = fields_res.get("result", [])
+    except Exception:
+        fields = []
+
+    if not fields:
+        if chosen_model == "填空题":
+            return (chosen_model, "文字", "背面额外内容")
+        return (chosen_model, "Text", "Back Extra")
+
+    text_candidates = ["Text", "文字", "Front", "正面", "Content", "内容"]
+    text_field = next((f for f in text_candidates if f in fields), fields[0])
+
+    extra_candidates = ["Back Extra", "背面额外内容", "Extra", "额外内容", "Back", "背面"]
+    extra_field = next((f for f in extra_candidates if f in fields), fields[1] if len(fields) > 1 else fields[0])
+
+    return (chosen_model, text_field, extra_field)
+
+
 def build_cloze_fallback(sentence, word, hint):
     # Normalize any single-brace {c1::...} or existing cloze into standard {{c1::...}}
     m_cloze = re.search(r'\{+c1::(.*?)(?:::([^}]+))?\}+', sentence)
@@ -676,7 +734,8 @@ def inject_into_anki(deck_name, vocab_items):
     except Exception as e:
         print(f"[WARN] 音频合成降级: {e}", file=sys.stderr)
 
-    # 3. 组装完形填空 (Cloze) 卡片列表
+    # 3. 组装完形填空 (Cloze) 卡片列表，自动适配中英文 Anki 模版与字段名
+    model_name, field_text, field_extra = resolve_cloze_model_and_fields(ANKI_MODEL_NAME)
     notes = []
     for item in vocab_items:
         word = item.get("word", "").strip()
@@ -732,10 +791,10 @@ def inject_into_anki(deck_name, vocab_items):
 
         notes.append({
             "deckName": deck_name,
-            "modelName": "Cloze",
+            "modelName": model_name,
             "fields": {
-                "Text": text_html,
-                "Back Extra": back_extra_html,
+                field_text: text_html,
+                field_extra: back_extra_html,
             },
             "options": {
                 "allowDuplicate": False,

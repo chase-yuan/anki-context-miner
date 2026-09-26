@@ -54,8 +54,21 @@ logger = logging.getLogger("MacTGBot")
 # ── 3. 权限安全守卫 ──
 async def check_auth(update: Update) -> bool:
     user = update.effective_user
-    if ADMIN_USER_ID != 0 and (not user or user.id != ADMIN_USER_ID):
-        logger.warning(f"Unauthorized access attempt from user: {user.id if user else 'Unknown'}")
+    if not user:
+        return False
+
+    if ADMIN_USER_ID == 0:
+        logger.error("ADMIN_USER_ID is not configured (0). Blocking request for security.")
+        if update.message:
+            await update.message.reply_text(
+                f"⚠️ *[安全拦截] 机器人尚未配置管理员 ID*\n\n"
+                f"您的 Telegram User ID 为：`{user.id}`\n\n"
+                f"请在 `config.json` 中配置 `telegram.admin_user_id: {user.id}`，或设置环境变量 `TELEGRAM_ADMIN_ID={user.id}`，随后重启机器人以解锁全部使用权限。"
+            )
+        return False
+
+    if user.id != ADMIN_USER_ID:
+        logger.warning(f"Unauthorized access attempt from user: {user.id}")
         if update.message:
             await update.message.reply_text("[安全] 权限拒绝：未授权的访问请求。")
         return False
@@ -157,21 +170,19 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_auth(update):
         return
     msg = (
-        "*Mac 终端 AI 助理（移动专属窗口）已全量就绪*\n\n"
-        "本机器人直接对接您 Mac 上的 Antigravity 智能体大脑，与您在 Mac Terminal 中聊天**完全等同**：\n\n"
-        "*支持功能与场景*：\n"
-        "• **任意自由聊天/技术提问**：随想随问，模型具备满血推理能力\n"
-        "• **调用电脑本地技能**：例如「_用消防总工考考我_」、「_检查 nlpm 规范_」\n"
-        "• **读写本地文件与知识库**：例如「_看下李笑来最新转录的笔记_」、「_搜索 Downloads 里的文件_」\n"
-        "• **B 站视频自动化精读**：发送任何 B 站链接（可附带要求，如 `链接 重点讲接线`）\n"
+        "*Anki Video & Text Miner 助理已就绪*\n\n"
+        "本机器人支持视频/文本词汇全自动挖掘与本地知识库联动：\n\n"
+        "*核心功能*：\n"
         "• **YouTube 进阶词汇挖掘与 Anki 直刷**：发送任何 YouTube 链接（可附带要求，如 `链接 挖掘 C1/C2 词汇`），自动提取字幕 $\\to$ 提炼 C1/C2 词汇 $\\to$ 在 Anki 创建子牌组写入卡片 $\\to$ 落盘 Obsidian。\n"
         "• **英文文本/长句/文章进阶词汇挖掘**：直接向机器人发送英文长段落（或使用 `文本: [内容]`），自动提取高阶表达与例句 $\\to$ 挑选存入 Anki $\\to$ 落盘 Obsidian。\n"
-        "• **本地文档全自动解析**：直接向机器人发送 `.txt` 或 `.md` 文本文件，自动解析全文并暂存候选词汇。\n\n"
-        "*硬件快捷指令*：\n"
-        "• `/status` - 查看 Mac 实时 CPU/内存/磁盘状态\n"
-        "• `/shot` - 拍摄当前 Mac 物理屏幕快照\n"
-        "• `/transcribe` - 启动李笑来音频离线转录流水线\n"
-        "• `/openchat` - 唤醒 VMark 挂载当前最新笔记"
+        "• **本地文档全自动解析**：直接向机器人发送 `.txt` 或 `.md` 文本文件，自动解析全文并暂存候选词汇。\n"
+        "• **B 站视频自动化精读**：发送任何 B 站链接（可附带要求，如 `链接 重点讲原理`）。\n"
+        "• **自由技术问答与任务处理**：直接输入文字，由底层配置的 LLM 模型直接推理。\n\n"
+        "*系统快捷指令*：\n"
+        "• `/status` - 查看宿主机实时 CPU/内存/磁盘状态\n"
+        "• `/shot` - 截取当前物理桌面屏幕快照\n"
+        "• `/transcribe` - 触发本地音频离线转录流水线\n"
+        "• `/openchat` - 唤醒 Markdown 编辑器挂载最新笔记"
     )
     await send_long_message(update.message, msg)
 

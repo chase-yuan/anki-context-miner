@@ -54,7 +54,7 @@ class LLMClient:
             from config_loader import get_config
             config = get_config()
         self.config = config
-        self.llm_cfg = config.get("llm", {})
+        self.llm_cfg = config.get("llm") if isinstance(config.get("llm"), dict) else config
         self.proxy_url = config.get("telegram", {}).get("proxy_url") or os.environ.get("HTTP_PROXY") or ""
 
     def _get_opener(self) -> urllib.request.OpenerDirector:
@@ -72,7 +72,7 @@ class LLMClient:
 
     def call_gemini_api(self, prompt: str, json_mode: bool = False, system_prompt: str = "") -> str:
         """Call official Google Gemini REST API."""
-        api_key = self.llm_cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
+        api_key = self.llm_cfg.get("gemini_api_key") or self.llm_cfg.get("api_key") or os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY not configured")
 
@@ -102,6 +102,7 @@ class LLMClient:
         """Call OpenAI or OpenAI-compatible endpoint (DeepSeek, OpenRouter, Ollama, etc.)."""
         api_key = (
             self.llm_cfg.get("openai_api_key")
+            or self.llm_cfg.get("api_key")
             or os.environ.get("OPENAI_API_KEY")
             or os.environ.get("DEEPSEEK_API_KEY")
         )
@@ -153,6 +154,7 @@ class LLMClient:
         """Call official Anthropic Claude Messages REST API."""
         api_key = (
             self.llm_cfg.get("anthropic_api_key")
+            or self.llm_cfg.get("api_key")
             or os.environ.get("ANTHROPIC_API_KEY")
             or os.environ.get("CLAUDE_API_KEY")
         )
