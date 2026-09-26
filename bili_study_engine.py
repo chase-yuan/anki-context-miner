@@ -18,10 +18,14 @@ import gzip
 import subprocess
 from datetime import datetime, timezone, timedelta
 
+from config_loader import load_config
+
+CONFIG = load_config()
+
 BEIJING_TZ = timezone(timedelta(hours=8))
-OBSIDIAN_VAULT = os.path.expanduser("~/Vault/MyObsidian")
-DOWNLOADS_DIR = os.path.expanduser("~/Downloads")
-COOKIE_FILE = os.path.expanduser("~/.config/bilibili/cookie.txt")
+OBSIDIAN_VAULT = os.path.expanduser(CONFIG.get("paths", {}).get("obsidian_vault", "")) if CONFIG.get("paths", {}).get("obsidian_vault") else ""
+DOWNLOADS_DIR = os.path.expanduser(CONFIG.get("paths", {}).get("downloads_dir") or "~/Downloads")
+COOKIE_FILE = os.path.expanduser(CONFIG.get("paths", {}).get("bilibili_cookie_file") or "~/.config/bilibili/cookie.txt")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -44,7 +48,24 @@ def is_vmark_running():
 def mount_to_vmark(file_path):
     if not is_vmark_running():
         return False
-    viewer_dir = os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts")
+    custom_script = CONFIG.get("paths", {}).get("vmark_script")
+    candidates = []
+    if custom_script:
+        candidates.append(os.path.expanduser(custom_script))
+    candidates.append(os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts"))
+
+    viewer_dir = None
+    for c in candidates:
+        if os.path.isfile(c) and c.endswith(".py"):
+            viewer_dir = os.path.dirname(c)
+            break
+        elif os.path.isdir(c) and os.path.isfile(os.path.join(c, "open_vmark_chat.py")):
+            viewer_dir = c
+            break
+
+    if not viewer_dir:
+        return False
+
     if viewer_dir not in sys.path:
         sys.path.insert(0, viewer_dir)
     try:
@@ -264,7 +285,10 @@ def generate_study_notes(meta, subtitle_body, source_label, user_query=None):
     else:
         category = "Bilibili 学习讲义"
         
-    target_dir = os.path.join(OBSIDIAN_VAULT, category)
+    if OBSIDIAN_VAULT:
+        target_dir = os.path.join(OBSIDIAN_VAULT, category)
+    else:
+        target_dir = os.path.expanduser(f"~/bilibili-notes/{category}")
     os.makedirs(target_dir, exist_ok=True)
     
     # 安全文件名

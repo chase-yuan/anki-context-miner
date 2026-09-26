@@ -40,6 +40,7 @@ ADMIN_USER_ID = int(CONFIG.get("telegram", {}).get("admin_user_id") or os.enviro
 PROXY_URL = CONFIG.get("telegram", {}).get("proxy_url") or os.environ.get("HTTP_PROXY") or ""
 MINER_SCRIPT = str(REPO_DIR / "youtube_anki_miner.py")
 BILI_SCRIPT = str(REPO_DIR / "bili_study_engine.py")
+STAGING_FILE = os.path.expanduser(CONFIG.get("paths", {}).get("staging_file") or "~/.config/anki_video_staging.json")
 
 # ── 2. 日志配置 ──
 logging.basicConfig(
@@ -236,15 +237,26 @@ async def openchat_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_auth(update):
         return
     await update.message.reply_text("[VMark] 正在呼叫 VMark 打开最新会话记录...")
-    script_path = os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts/open_vmark_chat.py")
-    if os.path.exists(script_path):
+    custom_script = CONFIG.get("paths", {}).get("vmark_script")
+    candidates = []
+    if custom_script:
+        candidates.append(os.path.expanduser(custom_script))
+    candidates.append(os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts/open_vmark_chat.py"))
+
+    script_path = None
+    for c in candidates:
+        if c and os.path.exists(c):
+            script_path = c
+            break
+
+    if script_path:
         res = subprocess.run([sys.executable, script_path, "--json"], capture_output=True, text=True)
         if res.returncode == 0:
             await update.message.reply_text("[VMark] 已在 VMark 中激活最新聊天记录标签页。")
         else:
             await update.message.reply_text(f"[提示] 激活提示: {res.stdout or res.stderr}")
     else:
-        await update.message.reply_text("[错误] VMark 脚本不存在。")
+        await update.message.reply_text("[提示] 未配置 VMark 联动脚本路径（可在 config.json 中配置 paths.vmark_script）。")
 
 
 async def sync_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -330,7 +342,7 @@ def find_raw_transcript(title: str):
 
 
 def build_state_capsule(target_video_id=None):
-    staging_file = os.path.expanduser("~/.config/youtube_anki_staging.json")
+    staging_file = STAGING_FILE
     if not os.path.exists(staging_file):
         return None
     try:
@@ -674,7 +686,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # ── 分支 2：多媒体暂存状态检测与确定性指令快速旁路 (< 0.01s) ──
-    staging_file = os.path.expanduser("~/.config/youtube_anki_staging.json")
+    staging_file = STAGING_FILE
     active_sessions = {}
     target_vid = None
 

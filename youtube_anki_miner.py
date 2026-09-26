@@ -48,7 +48,6 @@ ANKI_VOICE = CONFIG.get("anki", {}).get("voice") or os.environ.get("ANKI_VOICE")
 ANKI_DECK_PREFIX = CONFIG.get("anki", {}).get("deck_prefix") or "YouTube"
 ANKI_MODEL_NAME = CONFIG.get("anki", {}).get("model_name") or "Cloze"
 AUTO_SYNC = CONFIG.get("anki", {}).get("auto_sync", True)
-ANKI_MEDIA_DIR = os.path.expanduser("~/Library/Application Support/Anki2/User 1/collection.media")
 STAGING_FILE = os.path.expanduser(CONFIG.get("paths", {}).get("staging_file") or "~/.config/anki_video_staging.json")
 KNOWN_WORDS_FILE = os.path.expanduser(CONFIG.get("paths", {}).get("known_words_file") or "~/.config/english_known_words.txt")
 
@@ -626,8 +625,38 @@ def store_audio_in_anki(filename: str, audio_bytes: bytes) -> bool:
         return False
 
 
+def get_anki_media_dir() -> str:
+    """Dynamically resolve Anki media directory via config, AnkiConnect API, or profile discovery."""
+    configured = CONFIG.get("anki", {}).get("media_dir")
+    if configured:
+        p = os.path.expanduser(configured)
+        if os.path.isdir(p):
+            return p
+    try:
+        res = anki_request({"action": "getMediaDirPath", "version": 6})
+        if res and not res.get("error") and res.get("result"):
+            p = res["result"]
+            if os.path.isdir(p):
+                return p
+    except Exception:
+        pass
+    candidates = [
+        os.path.expanduser("~/Library/Application Support/Anki2"),
+        os.path.expanduser("~/.local/share/Anki2"),
+        os.path.expanduser("~/AppData/Roaming/Anki2"),
+    ]
+    for base in candidates:
+        if os.path.isdir(base):
+            for root, dirs, files in os.walk(base):
+                if os.path.basename(root) == "collection.media":
+                    return root
+    return ""
+
+
 async def prepare_vocab_audio(vocab_items: list, voice: str = ANKI_VOICE):
     """批量并发为词汇和例句合成高质量语音，并自动同步至 Anki 媒体库"""
+    media_dir = get_anki_media_dir()
+
     async def process_one(item):
         word = item.get("word", "").strip()
         context = item.get("context_sentence", "").strip()
@@ -640,28 +669,28 @@ async def prepare_vocab_audio(vocab_items: list, voice: str = ANKI_VOICE):
 
         # 1. 生词发音
         if word:
-            word_path = os.path.join(ANKI_MEDIA_DIR, word_fn)
-            if os.path.exists(word_path):
+            word_path = os.path.join(media_dir, word_fn) if media_dir else None
+            if word_path and os.path.exists(word_path):
                 item["word_audio"] = word_fn
             else:
                 try:
                     w_bytes = await synthesize_audio_bytes(word, voice)
                     success = await asyncio.to_thread(store_audio_in_anki, word_fn, w_bytes)
-                    if success or os.path.exists(word_path):
+                    if success or (word_path and os.path.exists(word_path)):
                         item["word_audio"] = word_fn
                 except Exception:
                     pass
 
         # 2. 原句朗读
         if context:
-            sent_path = os.path.join(ANKI_MEDIA_DIR, sent_fn)
-            if os.path.exists(sent_path):
+            sent_path = os.path.join(media_dir, sent_fn) if media_dir else None
+            if sent_path and os.path.exists(sent_path):
                 item["sent_audio"] = sent_fn
             else:
                 try:
                     s_bytes = await synthesize_audio_bytes(context, voice)
                     success = await asyncio.to_thread(store_audio_in_anki, sent_fn, s_bytes)
-                    if success or os.path.exists(sent_path):
+                    if success or (sent_path and os.path.exists(sent_path)):
                         item["sent_audio"] = sent_fn
                 except Exception:
                     pass
@@ -807,7 +836,24 @@ def is_vmark_running():
 def mount_to_vmark(file_path):
     if not is_vmark_running():
         return False
-    viewer_dir = os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts")
+    custom_script = CONFIG.get("paths", {}).get("vmark_script")
+    candidates = []
+    if custom_script:
+        candidates.append(os.path.expanduser(custom_script))
+    candidates.append(os.path.expanduser("~/.gemini/config/skills/vmark-chat-viewer/scripts"))
+
+    viewer_dir = None
+    for c in candidates:
+        if os.path.isfile(c) and c.endswith(".py"):
+            viewer_dir = os.path.dirname(c)
+            break
+        elif os.path.isdir(c) and os.path.isfile(os.path.join(c, "open_vmark_chat.py")):
+            viewer_dir = c
+            break
+
+    if not viewer_dir:
+        return False
+
     if viewer_dir not in sys.path:
         sys.path.insert(0, viewer_dir)
     try:

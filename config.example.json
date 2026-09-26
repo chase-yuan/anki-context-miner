@@ -15,11 +15,15 @@
     "deck_prefix": "YouTube",
     "model_name": "Cloze",
     "voice": "en-US-ChristopherNeural",
+    "media_dir": "",
     "auto_sync": true
   },
   "paths": {
     "obsidian_vault": "",
+    "downloads_dir": "~/Downloads",
     "staging_file": "~/.config/anki_video_staging.json",
-    "known_words_file": "~/.config/english_known_words.txt"
+    "known_words_file": "~/.config/english_known_words.txt",
+    "bilibili_cookie_file": "~/.config/bilibili/cookie.txt",
+    "vmark_script": ""
   }
 }
