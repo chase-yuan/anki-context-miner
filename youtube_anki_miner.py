@@ -420,11 +420,11 @@ def mine_c1_c2_vocabulary(title, full_text, user_query=None, exclude_words=None)
     instruction = ("\n".join(instruction_parts) + "\n") if instruction_parts else ""
 
     prompt = f"""You are a Master English Lexicographer and Cognitive Reduction Specialist for advanced English learners (CEFR C1+).
-Analyze the following YouTube video transcript and extract the most valuable, sophisticated expressions that cause comprehension or production friction.
+Analyze the following English content (video transcript, article, essay, speech, or text excerpt) and extract the most valuable, sophisticated expressions that cause comprehension or production friction.
 
-Video Title: "{title}"
+Source / Title: "{title}"
 {instruction}
-TRANSCRIPT CONTENT:
+CONTENT:
 {truncated_text}
 
 STRICT SELECTION CRITERIA:
@@ -440,10 +440,10 @@ STRICT SELECTION CRITERIA:
      e) 核心概念 / Key Concepts: Author-specific models or dense academic constructs.
 3. ZERO ARTIFICIAL QUANTITY RESTRICTIONS (CONTENT-DRIVEN):
    - Do NOT cap or arbitrarily limit the number of items. The content difficulty strictly dictates the extraction volume:
-     * 难的多挖点：If the video is intellectually dense, long, or rich in sophisticated language, exhaustively extract all genuinely challenging C1/C2 tokens, collocations, and phrases (whether that is 15, 25, or 35+ items).
-     * 简单的少挖点：If the video is simple, casual, or conversational, extract ONLY the few non-trivial items that truly qualify, even if just 2 or 3 items.
+     * 难的多挖点：If the text/video is intellectually dense, long, or rich in sophisticated language, exhaustively extract all genuinely challenging C1/C2 tokens, collocations, and phrases (whether that is 15, 25, or 35+ items).
+     * 简单的少挖点：If the text/video is simple, casual, or short, extract ONLY the few non-trivial items that truly qualify, even if just 1, 2 or 3 items.
    - Sole criterion: Whether an advanced learner might genuinely not understand, misinterpret, or struggle to spontaneously produce the expression. Zero artificial caps, zero padding.
-4. Grounding: Each item MUST have a verbatim context sentence from the transcript.
+4. Grounding: Each item MUST have a verbatim context sentence from the input text.
 
 OUTPUT FORMAT:
 Output ONLY a strictly valid JSON array of objects. No markdown preambles, no explanation outside JSON.
@@ -846,21 +846,21 @@ def save_obsidian_study_note(meta, vocab_items, deck_name, anki_res):
         f"author: \"{meta['author']}\"",
         f"url: \"{meta['url']}\"",
         f"created: \"{now_str}\"",
-        "tags: [english, youtube, vocabulary, c1_c2, anki]",
+        f"tags: ['english', 'vocabulary', 'c1_c2', 'anki', '{'text_reading' if meta.get('url', '').startswith(('text:', 'doc:')) else 'youtube'}']",
         "---",
         "",
         f"# {meta['title']}",
         "",
-        "> [!NOTE] 视频元数据与词汇统计",
-        f"> - **频道主创**：{meta['author']}",
-        f"> - **视频地址**：[{meta['url']}]({meta['url']})",
+        f"> [!NOTE] {'文本语料' if meta.get('url', '').startswith(('text:', 'doc:')) else '视频元数据'}与词汇统计",
+        f"> - **{'来源出处' if meta.get('url', '').startswith(('text:', 'doc:')) else '频道主创'}**：{meta['author']}",
+        f"> - **{'文档标识' if meta.get('url', '').startswith(('text:', 'doc:')) else '视频地址'}**：{meta['url'] if meta.get('url', '').startswith(('text:', 'doc:')) else ('[' + meta['url'] + '](' + meta['url'] + ')')}",
         f"> - **Anki 牌组**：`{deck_name}`",
         f"> - **词汇统计**：共提炼 **{len(vocab_items)}** 个高级表达（**C1**: {c1_count} 个 / **C2**: {c2_count} 个）",
         f"> - **Anki 同步**：{'成功注入 ' + str(anki_res.get('added', 0)) + ' 张新卡片' if anki_res.get('success') else '同步失败: ' + str(anki_res.get('error'))}",
         "",
         "## 1. C1 / C2 进阶词汇与地道表达速览表",
         "",
-        "| 单词 / 短语 | 音标 | 词性 | 级别 | 中文释义 | 原视频真实例句 |",
+        "| 单词 / 短语 | 音标 | 词性 | 级别 | 中文释义 | 语料真实例句 |",
         "| :--- | :--- | :---: | :---: | :--- | :--- |",
     ]
 
@@ -1013,6 +1013,21 @@ def run_pipeline(url_or_id, user_query=None):
 
 
 def run_preview(url_or_id, user_query=None):
+    if str(url_or_id).startswith("txt_"):
+        all_staging = load_all_staging_sessions()
+        sess = all_staging.get("sessions", {}).get(url_or_id)
+        if sess:
+            title = sess.get("meta", {}).get("title", "English Text")
+            author = sess.get("meta", {}).get("author", "Text Excerpt")
+            raw_file = os.path.join(RAW_TRANSCRIPT_DIR, f"{sanitize_filename(title)} (Raw Text).txt")
+            raw_text = ""
+            if os.path.exists(raw_file):
+                with open(raw_file, "r", encoding="utf-8") as f:
+                    raw_text = f.read()
+            if not raw_text:
+                raw_text = " ".join([c.get("context_sentence", "") for c in sess.get("candidates", [])])
+            return run_text_preview(raw_text, title=title, user_query=user_query, author=author)
+
     video_id = extract_video_id(url_or_id)
     if not video_id:
         return {"status": "error", "message": f"无效的 YouTube URL 或视频 ID: {url_or_id}"}
@@ -1131,6 +1146,100 @@ def run_preview(url_or_id, user_query=None):
         "start_index": start_index,
         "total_staged": len(merged_candidates),
     }
+
+
+def run_text_preview(raw_text: str, title: str = None, user_query: str = None, author: str = "Text Excerpt"):
+    """
+    Directly mine CEFR C1/C2 vocabulary, idioms, and phrases from raw text, paragraph, or article.
+    Stages the candidates so the user can interactively select and confirm into Anki.
+    """
+    if not raw_text or not raw_text.strip():
+        return {"status": "error", "message": "输入文本内容为空。"}
+
+    clean_text = raw_text.strip()
+    import hashlib
+    text_hash = hashlib.md5(f"{len(clean_text)}:{clean_text}".encode("utf-8")).hexdigest()[:12]
+    session_id = f"txt_{text_hash}"
+
+    if not title:
+        first_line = clean_text.split("\n")[0].strip()
+        first_line = re.sub(r'^[#*\-•\d.\s]+', '', first_line).strip()
+        title = first_line[:40] if first_line else "English Text Excerpt"
+        if len(first_line) > 40:
+            title += "..."
+
+    meta = {
+        "video_id": session_id,
+        "title": title,
+        "author": author,
+        "url": "text://local",
+    }
+
+    # Save to raw transcript cache
+    os.makedirs(RAW_TRANSCRIPT_DIR, exist_ok=True)
+    raw_file = os.path.join(RAW_TRANSCRIPT_DIR, f"{sanitize_filename(title)} (Raw Text).txt")
+    try:
+        with open(raw_file, "w", encoding="utf-8") as f:
+            f.write(clean_text)
+    except Exception:
+        pass
+
+    all_staging = load_all_staging_sessions()
+    prev_session = all_staging.get("sessions", {}).get(session_id, {})
+    prev_candidates = prev_session.get("candidates", []) if prev_session else []
+
+    is_remining = bool(user_query and any(k in user_query for k in ["重新", "重置", "从头", "清空"]))
+    exclude_words = []
+    if prev_candidates and not is_remining:
+        exclude_words = [c.get("word", "") for c in prev_candidates if c.get("word")]
+
+    try:
+        new_vocab = mine_c1_c2_vocabulary(title, clean_text, user_query, exclude_words=exclude_words)
+        if not new_vocab or not isinstance(new_vocab, list):
+            raise ValueError("提炼结果非有效列表。")
+    except Exception as e:
+        return {"status": "error", "message": f"AI 提炼词汇失败: {e}"}
+
+    subdeck_title = sanitize_deck_name(title)
+    deck_name = f"Text::{subdeck_title}"
+
+    if prev_candidates and not is_remining:
+        start_index = len(prev_candidates) + 1
+        merged_candidates = prev_candidates + new_vocab
+    else:
+        start_index = 1
+        merged_candidates = new_vocab
+
+    all_staging["sessions"][session_id] = {
+        "timestamp": time.time(),
+        "meta": meta,
+        "deck_name": deck_name,
+        "candidates": merged_candidates,
+        "raw_count": len(merged_candidates),
+    }
+    all_staging["latest_video_id"] = session_id
+    save_all_staging_sessions(all_staging)
+
+    return {
+        "status": "preview",
+        "video_id": session_id,
+        "title": title,
+        "author": author,
+        "url": "text://local",
+        "deck_name": deck_name,
+        "raw_count": len(new_vocab),
+        "candidates": new_vocab,
+        "start_index": start_index,
+        "total_staged": len(merged_candidates),
+    }
+
+
+def run_text_pipeline(raw_text: str, title: str = None, user_query: str = None, author: str = "Text Excerpt"):
+    preview_res = run_text_preview(raw_text, title=title, user_query=user_query, author=author)
+    if preview_res.get("status") != "preview":
+        return preview_res
+    session_id = preview_res.get("video_id")
+    return run_confirm(indices_str="all", target_video_id=session_id)
 
 
 def resolve_confirm_indices(user_input, candidates):
@@ -1288,21 +1397,43 @@ def run_confirm(indices_str="all", target_video_id=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="YouTube Anki Vocabulary Miner")
+    parser = argparse.ArgumentParser(description="Anki Vocabulary & High-Register Expression Miner")
     parser.add_argument("url", nargs="?", default=None, help="YouTube URL or Video ID")
+    parser.add_argument("-t", "--text", type=str, default=None, help="Raw text paragraph or article to mine")
+    parser.add_argument("-f", "--file", type=str, default=None, help="Path to text or markdown file to mine")
+    parser.add_argument("--title", type=str, default=None, help="Custom title for the text/document session")
     parser.add_argument("-q", "--query", type=str, default=None, help="User specific requirement")
     parser.add_argument("--preview", action="store_true", help="Stage candidates and output preview without injecting into Anki")
     parser.add_argument("--confirm", nargs="?", const="all", default=None, help="Confirm candidates into Anki (e.g. '1 3 5' or 'all')")
-    parser.add_argument("--video-id", type=str, default=None, help="Target specific video ID in staging sessions")
+    parser.add_argument("--video-id", type=str, default=None, help="Target specific video ID or session ID in staging")
     parser.add_argument("--json", action="store_true", help="Output JSON format")
     args = parser.parse_args()
 
     if args.confirm is not None:
         result = run_confirm(args.confirm, target_video_id=args.video_id)
+    elif args.text or args.file:
+        raw_text = args.text
+        title = args.title
+        author = "Text Excerpt"
+        if args.file:
+            if not os.path.exists(args.file):
+                err = {"status": "error", "message": f"未找到文件: {args.file}"}
+                print(json.dumps(err, ensure_ascii=False)) if args.json else print(f"[ERROR] 未找到文件: {args.file}", file=sys.stderr)
+                sys.exit(1)
+            with open(args.file, "r", encoding="utf-8", errors="replace") as f:
+                raw_text = f.read()
+            if not title:
+                title = Path(args.file).stem
+            author = Path(args.file).name
+
+        if args.preview:
+            result = run_text_preview(raw_text, title=title, user_query=args.query, author=author)
+        else:
+            result = run_text_pipeline(raw_text, title=title, user_query=args.query, author=author)
     elif args.preview:
         if not args.url:
-            err = {"status": "error", "message": "必须提供 YouTube URL 才能执行 --preview"}
-            print(json.dumps(err, ensure_ascii=False)) if args.json else print("[ERROR] 必须提供 YouTube URL", file=sys.stderr)
+            err = {"status": "error", "message": "必须提供 YouTube URL、--text 或 --file 才能执行 --preview"}
+            print(json.dumps(err, ensure_ascii=False)) if args.json else print("[ERROR] 必须提供 YouTube URL、--text 或 --file", file=sys.stderr)
             sys.exit(1)
         result = run_preview(args.url, args.query)
     else:

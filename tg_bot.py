@@ -15,6 +15,7 @@ import subprocess
 import sys
 import shutil
 from pathlib import Path
+from typing import Tuple, List, Optional, Dict, Any
 
 REPO_DIR = Path(__file__).resolve().parent
 if str(REPO_DIR) not in sys.path:
@@ -163,7 +164,9 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• **调用电脑本地技能**：例如「_用消防总工考考我_」、「_检查 nlpm 规范_」\n"
         "• **读写本地文件与知识库**：例如「_看下李笑来最新转录的笔记_」、「_搜索 Downloads 里的文件_」\n"
         "• **B 站视频自动化精读**：发送任何 B 站链接（可附带要求，如 `链接 重点讲接线`）\n"
-        "• **YouTube 进阶词汇挖掘与 Anki 直刷**：发送任何 YouTube 链接（可附带要求，如 `链接 挖掘 C1/C2 词汇`），自动提取字幕 $\to$ 提炼 C1/C2 词汇 $\to$ 在 Anki 创建子牌组写入卡片 $\to$ 落盘 Obsidian。\n\n"
+        "• **YouTube 进阶词汇挖掘与 Anki 直刷**：发送任何 YouTube 链接（可附带要求，如 `链接 挖掘 C1/C2 词汇`），自动提取字幕 $\\to$ 提炼 C1/C2 词汇 $\\to$ 在 Anki 创建子牌组写入卡片 $\\to$ 落盘 Obsidian。\n"
+        "• **英文文本/长句/文章进阶词汇挖掘**：直接向机器人发送英文长段落（或使用 `文本: [内容]`），自动提取高阶表达与例句 $\\to$ 挑选存入 Anki $\\to$ 落盘 Obsidian。\n"
+        "• **本地文档全自动解析**：直接向机器人发送 `.txt` 或 `.md` 文本文件，自动解析全文并暂存候选词汇。\n\n"
         "*硬件快捷指令*：\n"
         "• `/status` - 查看 Mac 实时 CPU/内存/磁盘状态\n"
         "• `/shot` - 拍摄当前 Mac 物理屏幕快照\n"
@@ -399,6 +402,13 @@ async def handle_yt_preview_display(message, data):
         card_block.append("")
         meta_parts.append("\n".join(card_block))
 
+    meta_parts.append(
+        "*操作提示*：\n"
+        "• 发送 `全部存入` 或 `all` 将上述卡片全量写入 Anki\n"
+        "• 发送序号（如 `1 3 5`、`前3个`、`除了第2个`）挑选存入\n"
+        "• 发送追问（如 `再挖掘更难的词汇`、`重点提取动词短语`）加深探索"
+    )
+
     await send_long_message(message, "\n".join(meta_parts))
 
 
@@ -407,12 +417,13 @@ def find_raw_transcript(title: str):
     if not os.path.exists(raw_dir) or not title:
         return None
     sanitized = re.sub(r'[\\/*?:"<>|]', "_", title).strip()
-    candidate = os.path.join(raw_dir, f"{sanitized} (Raw Transcript).txt")
-    if os.path.exists(candidate):
-        return candidate
+    for pattern in [f"{sanitized} (Raw Transcript).txt", f"{sanitized} (Raw Text).txt"]:
+        candidate = os.path.join(raw_dir, pattern)
+        if os.path.exists(candidate):
+            return candidate
     words = [w for w in re.split(r"[\s_]+", sanitized) if len(w) > 3]
     for f in os.listdir(raw_dir):
-        if f.endswith("(Raw Transcript).txt") and any(w in f for w in words):
+        if (f.endswith("(Raw Transcript).txt") or f.endswith("(Raw Text).txt")) and any(w in f for w in words):
             return os.path.join(raw_dir, f)
     return None
 
@@ -511,6 +522,22 @@ def run_preview_engine(target_vid: str, user_query: str = None):
     return res.stdout, res.stderr, res.returncode
 
 
+def run_text_preview_engine(raw_text: str = None, file_path: str = None, title: str = None, user_query: str = None):
+    cmd = [sys.executable, MINER_SCRIPT, "--preview", "--json"]
+    if file_path:
+        cmd.extend(["--file", file_path])
+    elif raw_text:
+        cmd.extend(["--text", raw_text])
+    else:
+        return json.dumps({"status": "error", "message": "未提供文本或文件"}), "", 1
+    if title:
+        cmd.extend(["--title", title])
+    if user_query:
+        cmd.extend(["-q", str(user_query)])
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    return res.stdout, res.stderr, res.returncode
+
+
 def run_general_llm(prompt_text: str) -> str:
     from llm_client import call_llm
     try:
@@ -522,37 +549,43 @@ def run_general_llm(prompt_text: str) -> str:
 
 def dispatch_semantic_intent(user_text: str, capsule: dict = None) -> dict:
     """通过配置的 LLM 引擎进行上下文感知与高精度语义意图调度"""
-    if not capsule:
-        return {"intent": "general_chat", "answer": run_general_llm(user_text)}
+    from llm_client import call_llm
 
-    prompt = f"""你是一个运行在 Mac 本地的高精度语义意图识别与执行调度器。
-用户正在 Telegram 上通过移动端与你交互。
-
-【当前激活的 YouTube 学习会话】：
-• 视频标题：{capsule['title']}
-• 视频作者：{capsule['author']}
-• 视频ID：{capsule['video_id']}
+    session_context = ""
+    if capsule:
+        session_context = f"""【当前激活的学习会话】：
+• 标题：{capsule['title']}
+• 作者：{capsule['author']}
+• 会话ID：{capsule['video_id']}
 • 候选词汇列表（共 {capsule['total_candidates']} 项）：
 {capsule['candidate_summary']}
-• 本地原始字幕文件：{capsule['transcript_file'] or '未缓存'}
+• 本地原始文本/字幕文件：{capsule['transcript_file'] or '未缓存'}"""
+    else:
+        session_context = "【当前无激活的暂存会话】"
+
+    prompt = f"""你是一个运行在本地的高精度语义意图识别与执行调度器。
+用户正在 Telegram 上通过移动端与你交互。
+
+{session_context}
 
 用户最新输入："{user_text}"
 
 请判定用户真实意图，必须严格按以下 JSON 格式输出，严禁输出任何多余的解释、Markdown 标记或代码块外的前后缀：
 {{
-  "intent": "confirm_anki" | "refine_mining" | "query_video" | "general_chat",
+  "intent": "confirm_anki" | "refine_mining" | "query_video" | "mine_text" | "general_chat",
   "indices": [如果 intent 是 confirm_anki，提取匹配到的候选词序号整数列表，如 [2, 10]],
-  "query": "如果 intent 是 refine_mining，提炼的新挖掘要求",
+  "query": "如果 intent 是 refine_mining 或 mine_text，提炼的具体挖掘偏好要求",
+  "text_content": "如果 intent 是 mine_text，提取用户要提炼的英文原文",
   "answer": "如果 intent 是 query_video 或 general_chat，直接针对问题给出高质量实质性解答"
 }}
 
 规则说明：
-1. confirm_anki：用户想把当前视频的某些词、全部词、或某个特征的词（如「把刚才讲走步的医学词和 aficionado 存进anki」、「存第2个」、「存C2的词」）存入 Anki。必须在 indices 中给出准确的序号整数列表。
-2. refine_mining：用户想在当前视频中挖掘更多、更难、更深、或者换一批词汇（如「再挖掘一些我可能不懂的单词以及短语」、「多找点地道习语」、「换一批更难的」）。必须在 query 中给出具体提炼要求。
-3. query_video：用户询问或讨论当前视频的具体内容、作者观点、核心论据（如「这个视频讲了什么？」、「作者提到的4步法具体是什么？」、「作者怎么解释多巴胺机制的？」）。如果本地有字幕文件，请直接结合内容给出详实解答并在 answer 中返回。
-4. general_chat：用户进行与该视频内容无关的通用提问、系统操作、询问使用方法（如「我要是想写入anki怎么做？」、「机器人没有智能吗？」、「用消防总工考考我」）。直接在 answer 中给予精准、无谄媚、实质性的解答。
+1. confirm_anki：用户想把当前会话的某些词、全部词、或某个特征的词存入 Anki。必须在 indices 中给出准确的序号整数列表。
+2. refine_mining：用户想在当前会话中挖掘更多、更难、更深、或者换一批词汇。必须在 query 中给出具体提炼要求。
+3. mine_text：用户发送了一段英文材料、或者要求从附带的文字中提取生词/进阶表达（如「帮我提炼这段文章的高级词：...」）。必须在 text_content 中提取出待分析的英文文本。
+4. query_video：用户询问或讨论当前会话的具体内容、作者观点、核心论据。如果本地有缓存文件，请结合内容给出详实解答并在 answer 中返回。
+5. general_chat：用户提问关于机器人的功能或讨论机器人本身能力（如「这个机器人不止局限于视频挖掘吧？」、「可以上传文本或一段话挖掘吗？」）、系统操作、或日常技术交流。必须在 answer 中明确确认并给出高质量实质性解答。
 """
-    from llm_client import call_llm
     try:
         stdout = call_llm(prompt, json_mode=True)
         payload = extract_json_payload(stdout)
@@ -711,6 +744,56 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_long_message(update.message, f"[错误] 处理异常：{e}\n{stdout or stderr}")
         return
 
+    # 1.3 显式文本挖掘前缀快速旁路 (text: / 文本: / mine: / 提炼: / 挖:) 或纯英文语料块
+    text_prefix_match = re.match(r"^(?:text|文本|mine|提炼|挖|生词|学这段|分析文本)\s*[:：]\s*(.+)", text, re.DOTALL | re.IGNORECASE)
+    raw_study_text = None
+    text_user_query = None
+
+    if text_prefix_match:
+        raw_study_text = text_prefix_match.group(1).strip()
+    else:
+        eng_words = re.findall(r"[a-zA-Z]{2,}", text)
+        cjk_chars = re.findall(r"[\u4e00-\u9fff]", text)
+        is_q = text.endswith(("?", "？")) or any(clean_text.startswith(q) for q in ["what ", "how ", "why ", "where ", "who ", "can you ", "could you ", "is there ", "are there "])
+        if len(eng_words) >= 15 and len(cjk_chars) < len(eng_words) * 0.25 and not is_q:
+            raw_study_text = text.strip()
+
+    if raw_study_text:
+        loop = asyncio.get_running_loop()
+        stop_typing = asyncio.Event()
+
+        async def keep_typing():
+            while not stop_typing.is_set():
+                try:
+                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+                except Exception:
+                    pass
+                try:
+                    await asyncio.wait_for(stop_typing.wait(), timeout=4.0)
+                except asyncio.TimeoutError:
+                    pass
+
+        typing_task = asyncio.create_task(keep_typing())
+        stdout, stderr, code = await loop.run_in_executor(
+            None,
+            lambda: run_text_preview_engine(raw_text=raw_study_text, user_query=text_user_query)
+        )
+        stop_typing.set()
+        await typing_task
+
+        try:
+            data = extract_json_payload(stdout)
+            if not data:
+                raise ValueError(f"脚本输出未包含有效 JSON:\n{stdout or stderr}")
+
+            if data.get("status") == "preview":
+                await handle_yt_preview_display(update.message, data)
+            else:
+                await send_long_message(update.message, f"[提示] 文本提炼提示：{data.get('message', '未成功提炼词汇')}")
+        except Exception as e:
+            await send_long_message(update.message, f"[错误] 处理异常：{e}\n{stdout or stderr}")
+        return
+
     # 快捷确定性指令：同步 Anki (< 0.01s 命中)
     if clean_text in ["同步", "同步anki", "anki同步", "同步卡片", "更新anki", "sync"]:
         await sync_cmd(update, context)
@@ -860,6 +943,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await send_long_message(update.message, f"[提示] 挖掘提示：{err_msg}")
             return
 
+    elif intent == "mine_text":
+        mine_text_content = payload.get("text_content") or text
+        mine_query = payload.get("query")
+        stop_typing.clear()
+        typing_task = asyncio.create_task(keep_typing())
+        stdout, stderr, code = await loop.run_in_executor(
+            None,
+            lambda: run_text_preview_engine(raw_text=mine_text_content, user_query=mine_query)
+        )
+        stop_typing.set()
+        await typing_task
+
+        data = extract_json_payload(stdout)
+        if data and data.get("status") == "preview":
+            await handle_yt_preview_display(update.message, data)
+            return
+        else:
+            err_msg = data.get("message") if data else (stderr or stdout)
+            await send_long_message(update.message, f"[提示] 文本提炼提示：{err_msg}")
+            return
+
     elif intent == "query_video":
         ans = payload.get("answer") or payload.get("message")
         if ans:
@@ -877,6 +981,82 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         stop_typing.set()
         await typing_task
         await send_long_message(update.message, fallback_reply)
+
+
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_auth(update):
+        return
+    doc = update.message.document
+    if not doc:
+        return
+
+    filename = doc.file_name or "document.txt"
+    file_ext = os.path.splitext(filename)[1].lower()
+
+    if file_ext not in [".txt", ".md", ".markdown", ".text"]:
+        await update.message.reply_text(f"[提示] 目前支持直接挖掘纯文本或 Markdown 文档（.txt, .md），当前收到: {filename}")
+        return
+
+    import tempfile
+    tmp_dir = tempfile.gettempdir()
+    local_path = os.path.join(tmp_dir, f"doc_{int(time.time())}_{filename}")
+
+    loop = asyncio.get_running_loop()
+    stop_typing = asyncio.Event()
+
+    async def keep_typing():
+        while not stop_typing.is_set():
+            try:
+                await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
+            except Exception:
+                pass
+            try:
+                await asyncio.wait_for(stop_typing.wait(), timeout=4.0)
+            except asyncio.TimeoutError:
+                pass
+
+    typing_task = asyncio.create_task(keep_typing())
+    try:
+        tg_file = await context.bot.get_file(doc.file_id)
+        await tg_file.download_to_drive(local_path)
+
+        with open(local_path, "r", encoding="utf-8", errors="replace") as f:
+            raw_text = f.read()
+
+        if not raw_text.strip():
+            stop_typing.set()
+            await typing_task
+            await update.message.reply_text(f"[提示] 文档 {filename} 内容为空。")
+            return
+
+        doc_title = Path(filename).stem
+        caption = (update.message.caption or "").strip()
+
+        stdout, stderr, code = await loop.run_in_executor(
+            None,
+            lambda: run_text_preview_engine(file_path=local_path, title=doc_title, user_query=caption or None)
+        )
+        stop_typing.set()
+        await typing_task
+
+        data = extract_json_payload(stdout)
+        if not data:
+            raise ValueError(f"脚本输出未包含有效 JSON:\n{stdout or stderr}")
+
+        if data.get("status") == "preview":
+            await handle_yt_preview_display(update.message, data)
+        else:
+            await send_long_message(update.message, f"[提示] 文档提炼提示：{data.get('message', '未成功提炼词汇')}")
+    except Exception as e:
+        stop_typing.set()
+        await typing_task
+        await send_long_message(update.message, f"[错误] 处理文档异常：{e}")
+    finally:
+        if os.path.exists(local_path):
+            try:
+                os.remove(local_path)
+            except Exception:
+                pass
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -927,6 +1107,7 @@ def main():
     app.add_handler(CommandHandler("transcribe", transcribe_cmd))
     app.add_handler(CommandHandler("openchat", openchat_cmd))
     app.add_handler(CommandHandler("sync", sync_cmd))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_text))
 
     print(f"[{datetime.datetime.now()}] Telegram Bot 服务已成功在 Mac 后台轮询运行中...")
