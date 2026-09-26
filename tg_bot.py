@@ -22,7 +22,7 @@ if str(REPO_DIR) not in sys.path:
     sys.path.insert(0, str(REPO_DIR))
 
 from config_loader import get_config
-from youtube_anki_miner import resolve_confirm_indices, OUTPUT_DIR
+from youtube_anki_miner import resolve_confirm_indices, OUTPUT_DIR, clean_spoken_filler, clean_zh_filler
 import telegram.error
 from telegram.request import HTTPXRequest
 from telegram import Update
@@ -396,8 +396,8 @@ async def handle_yt_preview_display(message, data):
         tag = f"[{cat} · {pos}]" if cat and pos else f"[{cat or pos}]"
         def_zh = v.get("definition_zh", "").strip()
         exp = v.get("explanation", "").strip()
-        ctx = v.get("context_sentence", "").strip()
-        trans = v.get("sentence_translation", "").strip()
+        ctx = clean_spoken_filler(v.get("context_sentence", "").strip())
+        trans = clean_zh_filler(v.get("sentence_translation", "").strip())
 
         card_block = [
             f"*{idx}. {w}* {ipa}{tag}",

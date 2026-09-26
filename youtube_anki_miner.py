@@ -326,6 +326,75 @@ def sanitize_deck_name(title):
     return clean or "Untitled Video"
 
 
+def clean_spoken_filler(text: str) -> str:
+    """
+    Remove spoken disfluencies, verbal fillers (um, uh, er, ah, etc.),
+    stutter repetitions, and messy ASR punctuation artifacts from context sentences.
+    Preserves all-caps acronyms (e.g. ER, AH-64) and cloze syntax {{c1::...}}.
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    cleaned = text.strip()
+
+    # 1. Protect existing cloze syntax {{c1::...}} from any accidental regex mutation
+    cloze_matches = []
+    def _mask_cloze(m):
+        idx = len(cloze_matches)
+        cloze_matches.append(m.group(0))
+        return f"___CLOZE_BLOCK_{idx}___"
+
+    cleaned = re.sub(r'\{+c1::.*?\}+', _mask_cloze, cleaned)
+
+    # 2. Clean leading filler interjections at sentence start (e.g. 'Well, ', 'Like, ', 'Um, ', 'You know, ')
+    cleaned = re.sub(r'^(?:[Ww]ell|[Ll]ike|[Ss]o|[Yy]ou know|[Ii] mean|[Uu]m|[Uu]h|[Ee]r|[Aa]h)\b\s*,\s*', '', cleaned)
+
+    # 3. Clean explicit vocal disfluencies: um, uh, er, ah, erm
+    # Match strictly lowercase or titlecase (um/Um, uh/Uh, er/Er, ah/Ah, erm/Erm)
+    # Exclude all-caps acronyms (ER, AH) and hyphenated compounds (AH-64, post-ER)
+    filler_pattern = r'(?<!-)\b(um|uh|er|ah|erm|Um|Uh|Er|Ah|Erm)\b(?!-)'
+    cleaned = re.sub(rf',?\s*{filler_pattern}\s*,?', ' ', cleaned)
+
+    # 4. Clean conversational filler phrases bracketed by commas or pauses
+    cleaned = re.sub(r',\s*(?:you know|i mean|sort of|kind of)\s*,', ' ', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b(?:you know|i mean)\b\s*,', '', cleaned, flags=re.IGNORECASE)
+
+    # 5. Clean word stutters / consecutive duplicate words (e.g. 'that, that' -> 'that', 'we we' -> 'we')
+    cleaned = re.sub(r'\b([a-zA-Z]+)\b\s*,\s*\b\1\b', r'\1', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b([a-zA-Z]+)\b\s+\b\1\b', r'\1', cleaned, flags=re.IGNORECASE)
+
+    # 6. Clean punctuation glitches caused by filler removal
+    cleaned = re.sub(r'\s*,\s*,+', ',', cleaned)
+    cleaned = re.sub(r'\s+([.,!?;:])', r'\1', cleaned)
+    cleaned = re.sub(r'^\s*[,;]\s*', '', cleaned)
+
+    # 7. Clean unnatural commas before conjunctions/subordinating clauses caused by filler deletion
+    cleaned = re.sub(r'\b(that|which|who|whom|whose|because|since|if|whether|than|as)\s*,\s*', r'\1 ', cleaned, flags=re.IGNORECASE)
+
+    # 8. Normalize whitespace
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+    # 9. Restore protected cloze blocks
+    for idx, block in enumerate(cloze_matches):
+        cleaned = cleaned.replace(f"___CLOZE_BLOCK_{idx}___", block)
+
+    # 10. Ensure sentence starts with uppercase
+    if cleaned and cleaned[0].islower():
+        cleaned = cleaned[0].upper() + cleaned[1:]
+
+    return cleaned
+
+
+def clean_zh_filler(text: str) -> str:
+    """清洗中文翻译中的口语助词与口水停顿词（嗯、呃、那个等）"""
+    if not text or not isinstance(text, str):
+        return ""
+    cleaned = text.strip()
+    cleaned = re.sub(r'^(?:嗯|呃|啊|噢|哦|那个|就是说)+[，,\s]*', '', cleaned)
+    cleaned = re.sub(r'[，,]\s*(?:嗯|呃|啊|噢|哦|那个)\s*[，,]', '，', cleaned)
+    cleaned = re.sub(r'[，,]{2,}', '，', cleaned)
+    return cleaned.strip()
+
+
 def parse_c1_c2_json_robust(output):
     """
     鲁棒解析 LLM 返回的 JSON 列表，支持：
@@ -448,7 +517,17 @@ STRICT SELECTION CRITERIA:
      * 难的多挖点：If the text/video is intellectually dense, long, or rich in sophisticated language, exhaustively extract all genuinely challenging C1/C2 tokens, collocations, and phrases (whether that is 15, 25, or 35+ items).
      * 简单的少挖点：If the text/video is simple, casual, or short, extract ONLY the few non-trivial items that truly qualify, even if just 1, 2 or 3 items.
    - Sole criterion: Whether an advanced learner might genuinely not understand, misinterpret, or struggle to spontaneously produce the expression. Zero artificial caps, zero padding.
-4. Grounding: Each item MUST have a verbatim context sentence from the input text.
+4. CONTEXT SENTENCE PURIFICATION & GRAMMATICAL REFINEMENT (MANDATORY):
+   Raw audio transcripts, video subtitles, and conversational speeches are heavily contaminated with spoken filler words, verbal disfluencies, stuttering, and speech-to-text (ASR) recognition errors. For every extracted item:
+   a) STRIP ALL SPOKEN FILLERS & ORAL DISFLUENCIES:
+      - Thoroughly eliminate all conversational filler words and verbal pauses: "um", "uh", "er", "ah", "you know", "like" (when used as empty pause filler), "sort of", "kind of", "I mean", "well" (introductory filler), and repeated stuttering words (e.g., "that, that" or "we, we").
+   b) FIX ASR & GRAMMATICAL DEFECTS:
+      - Correct speech-recognition typos, misrecognized words, missing prepositions, broken punctuation, and grammatical slips caused by speech-to-text noise.
+      - Refine the sentence into a grammatically flawless, natural, publication-grade English sentence suitable for flashcard review.
+   c) PRESERVE AUTHENTIC IN-SITU MEANING & STANCE:
+      - Faithfully preserve the speaker's original context, rhetorical stance, and factual meaning. Do NOT replace it with a generic, disconnected dictionary example. Transform the actual spoken utterance into pristine written English prose.
+   d) TARGET TOKEN INTEGRITY:
+      - The target expression MUST remain naturally and grammatically embedded in the purified context sentence in its proper inflection.
 
 OUTPUT FORMAT:
 Output ONLY a strictly valid JSON array of objects. No markdown preambles, no explanation outside JSON.
@@ -461,23 +540,23 @@ Each object must have the following fields:
 - "definition_zh": string (concise, precise Chinese meaning tailored to this specific video context)
 - "short_hint": string (sharp 2-6 character Chinese retrieval cue)
 - "explanation": string (1 concise sentence explaining the nuance, usage context, or why it fits C1/C2)
-- "context_sentence": string (the exact original sentence where it appeared)
-- "cloze_sentence": string (the verbatim context_sentence where the exact target token in its actual inflected form is wrapped as {{c1::exact_token::short_hint}})
-- "sentence_translation": string (natural, idiomatic Chinese translation of the context sentence)
+- "context_sentence": string (the purified, grammatically correct, filler-free English sentence without oral disfluencies)
+- "cloze_sentence": string (the purified context_sentence where the exact target token in its actual inflected form is wrapped as {{c1::exact_token::short_hint}})
+- "sentence_translation": string (accurate, elegant Chinese translation of the purified context sentence, free of spoken filler particles)
 
 Example output item:
 {{
-  "word": "champion",
-  "ipa": "/ˈtʃæm.pi.ən/",
-  "pos": "v.",
-  "level": "C1",
+  "word": "cavalier",
+  "ipa": "/ˌkæv.əˈlɪər/",
+  "pos": "adj.",
+  "level": "C2",
   "category": "熟词僻义",
-  "definition_zh": "公开捍卫，积极拥护",
-  "short_hint": "积极捍卫",
-  "explanation": "此处不作名词冠军，而是作动词表示支持和捍卫某种主张或政策。",
-  "context_sentence": "She championed the new policy despite fierce opposition.",
-  "cloze_sentence": "She {{c1::championed::积极捍卫}} the new policy despite fierce opposition.",
-  "sentence_translation": "尽管遭到强烈反对，她依然坚定地捍卫并推进这项新政策。"
+  "definition_zh": "漫不经心的；轻慢草率的",
+  "short_hint": "漫不经心",
+  "explanation": "此处形容对重要决断表现出不在乎、轻慢草率的处事态度，语气带有批评色彩。",
+  "context_sentence": "I don't believe that the Sony team was any more cavalier or loose than other executives might be.",
+  "cloze_sentence": "I don't believe that the Sony team was any more {{c1::cavalier::漫不经心}} or loose than other executives might be.",
+  "sentence_translation": "我不认为索尼团队比其他高管更加轻慢草率或松懈。"
 }}
 """
 
@@ -490,8 +569,15 @@ Example output item:
 
     raw_vocab = parse_c1_c2_json_robust(output)
     if exclude_words:
-        ex_set = set(w.strip().lower() for w in exclude_words if w.strip())
-        raw_vocab = [v for v in raw_vocab if v.get("word", "").strip().lower() not in ex_set]
+        ex_set = set((w or "").strip().lower() for w in exclude_words if w and (w or "").strip())
+        raw_vocab = [v for v in raw_vocab if isinstance(v, dict) and (v.get("word") or "").strip().lower() not in ex_set]
+
+    # 物理级清洗口语口水话、填充词与 ASR 残留断句，保证入库与朗读纯净
+    for item in raw_vocab:
+        if isinstance(item, dict):
+            item["context_sentence"] = clean_spoken_filler(item.get("context_sentence") or "")
+            item["cloze_sentence"] = clean_spoken_filler(item.get("cloze_sentence") or "")
+            item["sentence_translation"] = clean_zh_filler(item.get("sentence_translation") or "")
     return raw_vocab
 
 
@@ -587,25 +673,31 @@ def resolve_cloze_model_and_fields(preferred_model: str = None) -> Tuple[str, st
 
 
 def build_cloze_fallback(sentence, word, hint):
+    sentence = clean_spoken_filler(sentence or "")
+    clean_word = (word or "").strip()
+    clean_hint = (hint or "").strip()
+
     # Normalize any single-brace {c1::...} or existing cloze into standard {{c1::...}}
     m_cloze = re.search(r'\{+c1::(.*?)(?:::([^}]+))?\}+', sentence)
     if m_cloze:
-        target = m_cloze.group(1).strip()
-        cue = (m_cloze.group(2) or hint).strip()
+        target = (m_cloze.group(1) or "").strip()
+        cue = (m_cloze.group(2) or clean_hint).strip()
         return re.sub(r'\{+c1::.*?\}+', lambda _: f"{{{{c1::{target}::{cue}}}}}", sentence, count=1)
 
-    clean_word = word.strip()
+    if not clean_word:
+        return sentence
+
     # Enforce word boundaries \b to prevent sub-string false matching, and use lambda to prevent regex escape errors
     pattern = re.compile(rf"\b{re.escape(clean_word)}\b", re.IGNORECASE)
     if pattern.search(sentence):
-        return pattern.sub(lambda m: f"{{{{c1::{m.group(0)}::{hint}}}}}", sentence, count=1)
+        return pattern.sub(lambda m: f"{{{{c1::{m.group(0)}::{clean_hint}}}}}", sentence, count=1)
 
     alt_word = clean_word.replace("-", " ")
     pattern_alt = re.compile(rf"\b{re.escape(alt_word)}\b", re.IGNORECASE)
     if pattern_alt.search(sentence):
-        return pattern_alt.sub(lambda m: f"{{{{c1::{m.group(0)}::{hint}}}}}", sentence, count=1)
+        return pattern_alt.sub(lambda m: f"{{{{c1::{m.group(0)}::{clean_hint}}}}}", sentence, count=1)
 
-    return f"{sentence} ({{{{c1::{clean_word}::{hint}}}}})"
+    return f"{sentence} ({{{{c1::{clean_word}::{clean_hint}}}}})"
 
 
 async def synthesize_audio_bytes(text: str, voice: str = ANKI_VOICE) -> bytes:
@@ -675,8 +767,11 @@ async def prepare_vocab_audio(vocab_items: list, voice: str = ANKI_VOICE):
     media_dir = get_anki_media_dir()
 
     async def process_one(item):
-        word = item.get("word", "").strip()
-        context = item.get("context_sentence", "").strip()
+        if not isinstance(item, dict):
+            return
+        word = (item.get("word") or "").strip()
+        context = clean_spoken_filler((item.get("context_sentence") or "").strip())
+        item["context_sentence"] = context
 
         word_hash = hashlib.md5(word.lower().encode("utf-8")).hexdigest()[:8]
         sent_hash = hashlib.md5(context.encode("utf-8")).hexdigest()[:8]
@@ -712,7 +807,7 @@ async def prepare_vocab_audio(vocab_items: list, voice: str = ANKI_VOICE):
                 except Exception:
                     pass
 
-    tasks = [process_one(item) for item in vocab_items]
+    tasks = [process_one(item) for item in vocab_items if isinstance(item, dict)]
     await asyncio.gather(*tasks, return_exceptions=True)
 
 
@@ -738,18 +833,23 @@ def inject_into_anki(deck_name, vocab_items):
     model_name, field_text, field_extra = resolve_cloze_model_and_fields(ANKI_MODEL_NAME)
     notes = []
     for item in vocab_items:
-        word = item.get("word", "").strip()
-        ipa = item.get("ipa", "").strip()
-        pos = item.get("pos", "").strip()
-        level = item.get("level", "C1").strip()
-        def_zh = item.get("definition_zh", "").strip()
-        short_hint = item.get("short_hint", "").strip() or def_zh[:6]
-        explanation = item.get("explanation", "").strip()
-        context = item.get("context_sentence", "").strip()
-        cloze_sent = item.get("cloze_sentence", "").strip()
-        trans = item.get("sentence_translation", "").strip()
-        sent_audio = item.get("sent_audio", "")
-        word_audio = item.get("word_audio", "")
+        if not isinstance(item, dict):
+            continue
+        word = (item.get("word") or "").strip()
+        ipa = (item.get("ipa") or "").strip()
+        pos = (item.get("pos") or "").strip()
+        level = (item.get("level") or "C1").strip()
+        def_zh = (item.get("definition_zh") or "").strip()
+        short_hint = (item.get("short_hint") or "").strip() or def_zh[:6]
+        explanation = (item.get("explanation") or "").strip()
+        context = clean_spoken_filler((item.get("context_sentence") or "").strip())
+        cloze_sent = clean_spoken_filler((item.get("cloze_sentence") or "").strip())
+        trans = clean_zh_filler((item.get("sentence_translation") or "").strip())
+        item["context_sentence"] = context
+        item["cloze_sentence"] = cloze_sent
+        item["sentence_translation"] = trans
+        sent_audio = item.get("sent_audio") or ""
+        word_audio = item.get("word_audio") or ""
 
         # 确保包含有效的 Cloze 语法 {{c1::...::...}} 并处理词边界与单双括号
         cloze_sent = build_cloze_fallback(cloze_sent if cloze_sent else context, word, short_hint)
