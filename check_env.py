@@ -138,12 +138,14 @@ def check_llm_readiness(cfg: dict) -> bool:
     found_engines = []
 
     # 1. REST APIs
-    gemini_key = cfg.get("llm", {}).get("gemini_api_key") or os.environ.get("GEMINI_API_KEY")
+    universal_key = cfg.get("llm", {}).get("api_key")
+    gemini_key = cfg.get("llm", {}).get("gemini_api_key") or universal_key or os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         found_engines.append(("Gemini REST API", f"Key: {gemini_key[:6]}..."))
 
     openai_key = (
         cfg.get("llm", {}).get("openai_api_key")
+        or universal_key
         or os.environ.get("OPENAI_API_KEY")
         or os.environ.get("DEEPSEEK_API_KEY")
     )
@@ -153,6 +155,7 @@ def check_llm_readiness(cfg: dict) -> bool:
 
     claude_key = (
         cfg.get("llm", {}).get("anthropic_api_key")
+        or universal_key
         or os.environ.get("ANTHROPIC_API_KEY")
         or os.environ.get("CLAUDE_API_KEY")
     )
