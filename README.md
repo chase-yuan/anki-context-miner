@@ -187,6 +187,12 @@ install.bat
 - **零冗余装饰**：杜绝装饰性 Emoji 堆砌，完全依托字阶、字重与留白构建清晰认知层级。
 
 <p align="center">
+  <img src="docs/images/demo_review_card.gif" alt="Anki 真机刷卡交互演示" width="460">
+  <br>
+  <em>真机刷卡交互演示（空格键展开释义、例句与神经发音）</em>
+</p>
+
+<p align="center">
   <img src="docs/images/demo_anki_cards.png" alt="Anki 卡片深浅色排版效果" width="840">
 </p>
 
