@@ -2,7 +2,7 @@
 set -e
 
 echo "=========================================================="
-echo "    anki-video-miner One-Click Installer (macOS/Linux)    "
+echo "    anki-context-miner One-Click Installer (macOS/Linux)  "
 echo "=========================================================="
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

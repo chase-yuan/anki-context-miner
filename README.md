@@ -1,8 +1,8 @@
-# Anki Video Miner
+# Anki Context Miner
 
-**An autonomous, cross-platform tool to extract advanced vocabulary, contextual sentences, and neural audio from YouTube videos and English text directly into Anki.**
+**The autonomous, multimodal vocabulary extraction and Anki flashcard engine for macOS & Windows.**
 
-Features remote Telegram bot control, multi-engine LLM support (Gemini, DeepSeek, OpenAI, Claude, Codex, Antigravity), native neural voice synthesis, and instant AnkiWeb cloud synchronization.
+Turn real-world context—YouTube videos, online lectures, articles, local documents, and mobile thoughts—into pristine Anki cloze flashcards with native neural audio. Controlled seamlessly via Telegram with instant AnkiWeb cloud synchronization.
 
 [![Architecture: MADR 0001](https://img.shields.io/badge/Architecture-MADR%200001-blue.svg)](docs/adr/0001-cross-platform-ai-deployment-architecture.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -14,8 +14,8 @@ Features remote Telegram bot control, multi-engine LLM support (Gemini, DeepSeek
 
 ```mermaid
 flowchart TD
-    subgraph "Mobile Interface"
-        A["Mobile Phone (Telegram)"] -->|"Share YouTube / Bili URL or text"| B["Background Daemon (tg_bot.py)"]
+    subgraph "Mobile & Desktop Interface"
+        A["Mobile Phone / Desktop (Telegram)"] -->|"Share Video URL, Article Text, or Document"| B["Background Daemon (tg_bot.py)"]
     end
 
     subgraph "Core Processing Engine"
@@ -85,8 +85,8 @@ You can configure any of the following providers in `config.json` or through env
 If you use an AI terminal assistant (**Codex CLI**, **Google Antigravity**, or **Claude Code**), open your terminal in the cloned directory and run:
 
 ```bash
-git clone https://github.com/chase-yuan/anki-video-miner.git
-cd anki-video-miner
+git clone https://github.com/chase-yuan/anki-context-miner.git
+cd anki-context-miner
 
 # With Google Antigravity:
 agy run AI_SETUP_PROMPT.md
@@ -108,15 +108,15 @@ If you prefer a direct script without an AI CLI:
 
 #### On macOS / Linux:
 ```bash
-git clone https://github.com/chase-yuan/anki-video-miner.git
-cd anki-video-miner
+git clone https://github.com/chase-yuan/anki-context-miner.git
+cd anki-context-miner
 ./install.sh
 ```
 
 #### On Windows:
 ```cmd
-git clone https://github.com/chase-yuan/anki-video-miner.git
-cd anki-video-miner
+git clone https://github.com/chase-yuan/anki-context-miner.git
+cd anki-context-miner
 install.bat
 ```
 

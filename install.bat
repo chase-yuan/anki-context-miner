@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 echo ==========================================================
-echo      anki-video-miner One-Click Installer (Windows)
+echo      anki-context-miner One-Click Installer (Windows)
 echo ==========================================================
 
 cd /d "%~dp0"

@@ -68,9 +68,13 @@ def check_pip_package(module_name: str, package_name: str) -> bool:
 def check_config() -> tuple[bool, dict]:
     cfg_path = Path(__file__).resolve().parent / "config.json"
     if not cfg_path.is_file():
-        alt = Path.home() / ".config" / "anki-video-miner" / "config.json"
+        alt = Path.home() / ".config" / "anki-context-miner" / "config.json"
         if alt.is_file():
             cfg_path = alt
+        else:
+            legacy = Path.home() / ".config" / "anki-video-miner" / "config.json"
+            if legacy.is_file():
+                cfg_path = legacy
 
     if not cfg_path.is_file():
         print_status("Configuration File", False, "config.json not found", "cp config.example.json config.json")
@@ -192,7 +196,7 @@ def check_llm_readiness(cfg: dict) -> bool:
 
 def main():
     print(f"\n{BLUE}======================================================{RESET}")
-    print(f"{BLUE}      Anki Video Miner - Environment Doctor           {RESET}")
+    print(f"{BLUE}      Anki Context Miner - Environment Doctor         {RESET}")
     print(f"{BLUE}======================================================{RESET}\n")
 
     results = []

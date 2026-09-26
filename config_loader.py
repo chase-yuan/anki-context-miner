@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional
 
 CONFIG_LOCATIONS = [
     Path(__file__).resolve().parent / "config.json",
+    Path.home() / ".config" / "anki-context-miner" / "config.json",
     Path.home() / ".config" / "anki-video-miner" / "config.json",
 ]
 

@@ -31,7 +31,7 @@ IS_WIN = platform.system() == "Windows"
 
 def print_banner():
     print("=" * 64)
-    print("   anki-video-miner: Cross-Platform Physical Setup Wizard")
+    print("   anki-context-miner: Cross-Platform Physical Setup Wizard")
     print(f"   OS: {platform.system()} {platform.release()} ({platform.machine()})")
     print("=" * 64)
 

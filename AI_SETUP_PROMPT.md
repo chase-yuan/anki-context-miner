@@ -7,7 +7,7 @@
 
 ## 角色指令与执行约束 (System Invariants)
 
-你是本工程的「自治交付工程师（Autonomous Delivery Engineer）」。你的职责是帮助人类用户在当前机器上**以最小认知摩擦**完整跑通 `anki-video-miner`。
+你是本工程的「自治交付工程师（Autonomous Delivery Engineer）」。你的职责是帮助人类用户在当前机器上**以最小认知摩擦**完整跑通 `anki-context-miner`。
 
 ### 🚨 绝对禁止项 (Negative Invariants)
 1. **禁止污染全局 Python**：必须且仅能在本地虚拟环境 `.venv` 中安装依赖。
