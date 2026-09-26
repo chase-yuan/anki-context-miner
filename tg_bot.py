@@ -40,7 +40,6 @@ BOT_TOKEN = CONFIG.get("telegram", {}).get("bot_token") or os.environ.get("TELEG
 ADMIN_USER_ID = int(CONFIG.get("telegram", {}).get("admin_user_id") or os.environ.get("TELEGRAM_ADMIN_ID") or 0)
 PROXY_URL = CONFIG.get("telegram", {}).get("proxy_url") or os.environ.get("HTTP_PROXY") or ""
 MINER_SCRIPT = str(REPO_DIR / "youtube_anki_miner.py")
-BILI_SCRIPT = str(REPO_DIR / "bili_study_engine.py")
 STAGING_FILE = os.path.expanduser(CONFIG.get("paths", {}).get("staging_file") or "~/.config/anki_video_staging.json")
 
 # ── 2. 日志配置 ──
@@ -621,74 +620,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ── 分支 1：Fast-Bypass 视频链接（极速拦截，无需智能体路由） ──
     url_match = re.search(r"(https?://[^\s]+)", text)
-    bv_match = re.search(r"(BV[a-zA-Z0-9]{10})", text, re.IGNORECASE)
 
-    # 1.1 Bilibili 链接
-    bili_url = None
-    if url_match and ("bilibili.com" in url_match.group(1) or "b23.tv" in url_match.group(1)):
-        bili_url = url_match.group(1)
-    elif not url_match and bv_match:
-        bili_url = bv_match.group(1)
-
-    if bili_url:
-        user_query = text.replace(bili_url, "").strip()
-        user_query = re.sub(r"【.*?】", "", user_query).strip()
-        user_query = re.sub(r"(赶紧来看看吧|点击链接查看|去\s*bilibili\s*看视频|点击链接直接打开|哔哩哔哩)", "", user_query).strip()
-
-        loop = asyncio.get_running_loop()
-        stop_typing = asyncio.Event()
-
-        async def keep_typing():
-            while not stop_typing.is_set():
-                try:
-                    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-                except Exception:
-                    pass
-                try:
-                    await asyncio.wait_for(stop_typing.wait(), timeout=4.0)
-                except asyncio.TimeoutError:
-                    pass
-
-        typing_task = asyncio.create_task(keep_typing())
-
-        def run_bili_engine():
-            if not os.path.exists(BILI_SCRIPT):
-                return json.dumps({"status": "error", "message": "bili_study_engine.py not bundled"}), "", 1
-            cmd = [sys.executable, BILI_SCRIPT, bili_url, "--json"]
-            if user_query:
-                cmd.extend(["-q", user_query])
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-            return res.stdout, res.stderr, res.returncode
-
-        stdout, stderr, code = await loop.run_in_executor(None, run_bili_engine)
-        stop_typing.set()
-        await typing_task
-
-        try:
-            data = extract_json_payload(stdout)
-            if not data:
-                raise ValueError(f"脚本输出未包含有效 JSON:\n{stdout or stderr}")
-
-            if data.get("status") == "success":
-                msg_parts = [
-                    "*【B 站课程精编讲义已生成】*\n",
-                    f"• *课程*：{data.get('title')}",
-                    f"• *小节*：`P{data.get('page')}` {data.get('part_title')}",
-                    f"• *来源*：`{data.get('source')}`",
-                    f"• *VMark 状态*：{'已静默挂载到标签页' if data.get('vmark_mounted') else '未运行'}",
-                    f"• *归档*：`{data.get('note_file')}`\n",
-                ]
-                if data.get("answer"):
-                    msg_parts.append(f"*【专项深度解答】*:\n{data.get('answer')}\n")
-                msg_parts.append("*您可以直接发送消息继续聊天或追问。*")
-                await send_long_message(update.message, "\n".join(msg_parts))
-            else:
-                await send_long_message(update.message, f"[提示] 解析提示：{data.get('message', '未提取到字幕')}")
-        except Exception as e:
-            await send_long_message(update.message, f"[错误] 处理异常：{e}\n{stdout or stderr}")
-        return
-
-    # 1.2 YouTube 链接
+    # 1.1 YouTube 链接
     yt_url = None
     if url_match and ("youtube.com" in url_match.group(1) or "youtu.be" in url_match.group(1)):
         yt_url = url_match.group(1)

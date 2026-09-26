@@ -31,8 +31,6 @@
     "obsidian_vault": "",
     "downloads_dir": "~/Downloads",
     "staging_file": "~/.config/anki_video_staging.json",
-    "known_words_file": "~/.config/english_known_words.txt",
-    "bilibili_cookie_file": "~/.config/bilibili/cookie.txt",
-    "vmark_script": ""
+    "known_words_file": "~/.config/english_known_words.txt"
   }
 }

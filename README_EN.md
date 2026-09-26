@@ -30,7 +30,7 @@ flowchart TD
 
     subgraph "Core Mining & Analysis Engine"
         B --> C{"Multimodal Gateway"}
-        C -->|"Video URLs (YouTube / Bilibili)"| D["Transcript Extraction & Timestamp Alignment"]
+        C -->|"Video URLs (YouTube)"| D["Transcript Extraction & Timestamp Alignment"]
         C -->|"Text Snippets / Documents (.txt / .md)"| E["Advanced Vocabulary & Context Mining"]
         C -->|"Selection Commands (e.g. '1 3 5' / 'all')"| F["Deterministic Card Assembly (0.01s)"]
         C -->|"Follow-up Queries / QA"| G["Multi-Engine LLM Dispatcher"]
@@ -52,7 +52,7 @@ flowchart TD
 
 - **Mobile-First Remote Workflow**: Send a video link or article excerpt from Telegram on your phone while commuting. When you open Anki on your phone or desktop, your flashcards and native audio are already synced.
 - **Multimodal Context Ingestion**:
-  - **Video Stream**: Subtitle and verbatim extraction for YouTube and Bilibili videos;
+  - **Video Stream**: Subtitle and verbatim extraction for YouTube lectures, podcasts, and documentaries;
   - **Text Stream**: Direct forwarding of article excerpts, papers, and essays for instant lexical analysis;
   - **Document Stream**: Drag-and-drop `.txt` or `.md` files to automatically parse and extract high-register terms.
 - **Full Cross-Platform Parity**: Native background support for **macOS** (`launchd` daemon, Retina screen capture, caffeinate anti-sleep) and **Windows** (invisible background VBS runner, PowerShell high-DPI screenshot, Windows execution state anti-sleep).
@@ -163,7 +163,6 @@ The system runs completely silently in the background:
 | User Message | Action Performed | Response |
 | :--- | :--- | :--- |
 | `https://youtube.com/watch?v=...` | Extracts video subtitles and runs lexical mining | Returns numbered candidates with IPA, POS, and definitions |
-| `https://bilibili.com/video/BV...` | Extracts subtitles/audio and generates study notes | Returns structured lecture notes and saves to local vault |
 | English text paragraph (or `text: [content]`) | Mines C1/C2 vocabulary directly from text or article paragraph | Stages numbered candidates for Anki selection |
 | Drag & drop `.txt` or `.md` file | Parses text document and extracts high-register vocabulary | Stages candidates with document title metadata |
 | `1 3 5` or `all` or `top 3` | Instantly injects selected items into Anki with audio | Adds Cloze cards and triggers AnkiWeb cloud sync |
