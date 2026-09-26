@@ -1,0 +1,5 @@
+' Windows Invisible Background Runner for anki-video-miner
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.CurrentDirectory = "{{WORKING_DIR}}"
+WshShell.Run """{{PYTHONW_PATH}}"" ""{{BOT_SCRIPT_PATH}}""", 0, False
+Set WshShell = Nothing

@@ -1,0 +1,8 @@
+@echo off
+chcp 65001 >nul
+cd /d "{{WORKING_DIR}}"
+call "{{VENV_ACTIVATE}}"
+"{{PYTHON_PATH}}" "{{BOT_SCRIPT_PATH}}"
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Bot exited with error code %ERRORLEVEL% >> "{{ERR_PATH}}"
+)
