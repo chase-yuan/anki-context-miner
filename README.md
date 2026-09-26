@@ -1,183 +1,196 @@
 # Anki Context Miner
 
-**The autonomous, multimodal vocabulary extraction and Anki flashcard engine for macOS & Windows.**
+<p align="center">
+  <b>跨平台全模态语境生词挖掘与 Anki 卡片自动化直刷引擎</b><br>
+  <i>随时随地通过手机 Telegram 捕捉视频、长文、文档中的真实语境，一键生成高保真神经语音 Anki 填空卡片并即时云端同步。</i>
+</p>
 
-Turn real-world context—YouTube videos, online lectures, articles, local documents, and mobile thoughts—into pristine Anki cloze flashcards with native neural audio. Controlled seamlessly via Telegram with instant AnkiWeb cloud synchronization.
+<p align="center">
+  <a href="README.md"><b>简体中文</b></a> | <a href="README_EN.md">English</a>
+</p>
 
-[![Architecture: MADR 0001](https://img.shields.io/badge/Architecture-MADR%200001-blue.svg)](docs/adr/0001-cross-platform-ai-deployment-architecture.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform: macOS | Windows](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-brightgreen.svg)](#)
+<p align="center">
+  <a href="docs/adr/0001-cross-platform-ai-deployment-architecture.md"><img src="https://img.shields.io/badge/架构规范-MADR%200001-blue.svg" alt="Architecture"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/开源协议-MIT-yellow.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/支持平台-macOS%20%7C%20Windows-brightgreen.svg" alt="Platform">
+</p>
 
 ---
 
-## 1. System Architecture
+## 1. 系统架构与全模态流转
 
 ```mermaid
 flowchart TD
-    subgraph "Mobile & Desktop Interface"
-        A["Mobile Phone / Desktop (Telegram)"] -->|"Share Video URL, Article Text, or Document"| B["Background Daemon (tg_bot.py)"]
+    subgraph "移动与桌面交互端"
+        A["手机 / 电脑 Telegram 客户端"] -->|"分享视频链接 / 英文长文 / 拖拽文本文件"| B["后台常驻守护进程 (tg_bot.py)"]
     end
 
-    subgraph "Core Processing Engine"
-        B --> C{"Hierarchical Gateway"}
-        C -->|"Direct URL"| D["Video Subtitle & Metadata Extraction"]
-        C -->|"Selection (e.g. '1 3 5' / 'all')"| E["Instant Deterministic Filter (0.01s)"]
-        C -->|"Natural Speech / Questions"| F["Multi-Engine LLM Dispatcher (CLI or REST API)"]
-        D --> G["CEFR C1/C2 Lexicographical Mining"]
-        G --> H["Edge-TTS Neural Voice Synthesis (Word + Sentence Audio)"]
+    subgraph "核心分析与挖掘引擎"
+        B --> C{"多模态智能网关"}
+        C -->|"视频链接 (YouTube / B站)"| D["逐字稿提取与时间轴对齐"]
+        C -->|"文本段落 / 文档 (.txt / .md)"| E["高阶表达与语境例句挖掘"]
+        C -->|"选择指令 (如 '1 3 5' / 'all')"| F["零延迟卡片装配 (0.01s)"]
+        C -->|"自由对话 / 追问"| G["多引擎 LLM 推理调度器"]
+        D --> E
+        E --> H["微软 Edge-TTS 神经语音合成 (单词 + 例句)"]
     end
 
-    subgraph "Sync & Presentation Layer"
-        E --> I["AnkiConnect Direct Injection (127.0.0.1:8765)"]
+    subgraph "呈现与存储层"
+        F --> I["AnkiConnect 自动化注入 (127.0.0.1:8765)"]
         H --> I
-        I --> J["Automatic AnkiWeb Cloud Sync"]
-        J --> K["Instant Availability on iPhone & Android Anki"]
+        I --> J["AnkiWeb 零感云端同步"]
+        J --> K["iPhone / Android / iPad 即时复习"]
     end
 ```
 
 ---
 
-## 2. Core Highlights
+## 2. 核心特性
 
-- **Mobile Remote Workflow**: Send a video link from Telegram on your phone while commuting. When you arrive home or open Anki, your curated flashcards and native audio are already synced.
-- **Cross-Platform Parity**: Full native support for **macOS** (launchd daemon, Retina screenshot, caffeinate anti-sleep) and **Windows** (invisible background VBS runner, PowerShell screenshot, Windows sleep prevention API).
-- **Dual-Track Zero-Friction Setup**:
-  - **Track 1 (AI Agent CLI)**: Log into your AI terminal (`codex`, `agy`, `claude`) and let the AI automatically inspect, configure, and mount the daemon with zero manual guesswork.
-  - **Track 2 (Native 1-Click)**: Run `install.sh` (macOS) or `install.bat` (Windows) for instant isolated `.venv` bootstrap.
-- **Universal LLM Flexibility**: Choose between direct cloud REST APIs (Google Gemini, DeepSeek, OpenAI, Anthropic Claude) or local logged-in CLI agents (OpenAI Codex, Google Antigravity, Claude Code) with zero API keys required.
-- **Clean Responsive Typography**: Elegant, boxless design using native system font stacks. Automatically adapts between daylight light mode and pure-black OLED dark mode with high contrast.
-- **Intelligent Vocabulary Calibration**: Focuses on high-register expressions, deceptive idioms, and phrasal collocations while filtering out everyday common words.
+- **移动端优先的工作流**：通勤路上在手机 Telegram 发送视频链接或英文段落，回到家或打开手机 Anki，提炼出的生词、例句与地道真人发音已经同步完毕。
+- **全模态语境覆盖**：
+  - **视频语境**：支持 YouTube、Bilibili 视频的字幕与逐字稿提炼；
+  - **文本语境**：手机端直接转发阅读的长文章段落、学术论文节选，即时提炼高阶表达；
+  - **文档语境**：直接向机器人拖拽发送 `.txt` 或 `.md` 文本文件，全自动批量解析并生成待选词表。
+- **跨平台完全对齐**：原生支持 **macOS**（基于 launchd 的后台无感保活、Retina 屏幕快照、防睡眠）与 **Windows**（基于 VBS 无黑框静默启动、PowerShell 高清截屏、系统执行状态防休眠）。
+- **双轨无摩擦部署**：
+  - **轨道一（AI 终端智能体）**：终端运行 `codex`、`agy` 或 `claude`，AI 依据规范自动完成环境探测与后台开机自启配置；
+  - **轨道二（原生 1 键向导）**：运行 `install.sh`（macOS）或双击 `install.bat`（Windows），秒级完成沙盒虚拟环境初始化与服务注册。
+- **灵活的推理引擎矩阵**：原生支持主流云端 API（Google Gemini、DeepSeek、OpenAI、Anthropic Claude），亦支持调用本地已登录的 AI 终端工具，无需额外申请 API Key。
+- **极简自适应排版**：卡片排版基于 Apple / Tailwind 设计令牌构建，完全去方框化，自适应夜间纯黑 OLED 暗黑模式（满足 AAA 级对比度）。
+- **智能词汇难度标定**：自动过滤日常基础词汇，专注提炼高阶表达、熟词僻义、地道搭配与逻辑句式。
 
 ---
 
-## 3. Supported LLM Engines
+## 3. 支持的 LLM 引擎矩阵
 
-You can configure any of the following providers in `config.json` or through environment variables. By default (`"provider": "auto"`), the system checks your active API keys first, and automatically falls back to your local logged-in CLI tools.
+系统在 `config.json` 或环境变量中支持配置以下服务商。默认采用 `"provider": "auto"` 自动回退策略：优先使用配置的 API Key，若无则自动调用本地已授权的 CLI 终端工具。
 
-| Provider | Type | Setup Requirements | Default Model |
+| 引擎名称 | 类型 | 配置要求 | 默认模型 |
 | :--- | :--- | :--- | :--- |
-| **Google Gemini API** | Cloud REST | Set `GEMINI_API_KEY` (Free at Google AI Studio) | `gemini-2.5-flash` |
-| **DeepSeek API** | Cloud REST | Set `DEEPSEEK_API_KEY` (`https://api.deepseek.com/v1`) | `deepseek-chat` |
-| **OpenAI API** | Cloud REST | Set `OPENAI_API_KEY` | `gpt-4o-mini` |
-| **Claude API** | Cloud REST | Set `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
-| **OpenAI Codex CLI** | Local CLI | Run `codex login` (No API key needed) | User default profile |
-| **Antigravity CLI (agy)** | Local CLI | Installed via Antigravity (No API key needed) | Default workspace model |
-| **Claude Code CLI** | Local CLI | Run `claude login` (No API key needed) | Default Claude session |
+| **Google Gemini API** | 云端 REST | 配置 `GEMINI_API_KEY`（可在 Google AI Studio 免费申请） | `gemini-2.5-flash` |
+| **DeepSeek API** | 云端 REST | 配置 `DEEPSEEK_API_KEY`（兼容 OpenAI 规范） | `deepseek-chat` |
+| **OpenAI API** | 云端 REST | 配置 `OPENAI_API_KEY` | `gpt-4o-mini` |
+| **Anthropic Claude API**| 云端 REST | 配置 `ANTHROPIC_API_KEY` | `claude-3-5-haiku-20241022` |
+| **OpenAI Codex CLI** | 本地 CLI | 执行 `codex login`（无需 API Key） | 用户默认配置 |
+| **Antigravity CLI (agy)**| 本地 CLI | 安装 Antigravity（无需 API Key） | 当前工作区默认模型 |
+| **Claude Code CLI** | 本地 CLI | 执行 `claude login`（无需 API Key） | 默认 Claude 会话 |
 
 ---
 
-## 4. Quickstart & Deployment
+## 4. 快速开始与环境部署
 
-### Essential Prerequisites (Human Action Required)
+### 必要前置准备（耗时约 3 分钟）
 
-1. **Telegram Credentials**:
-   - Get your Bot Token from [@BotFather](https://t.me/botfather).
-   - Get your numeric User ID from [@userinfobot](https://t.me/userinfobot).
-2. **Anki Desktop Setup**:
-   - Open Anki Desktop -> **Tools -> Add-ons -> Get Add-ons...**
-   - Install **AnkiConnect** (code: `2055492159`).
-   - Keep Anki running during initial setup.
+1. **Telegram 机器人凭证**：
+   - 在 Telegram 中与 [@BotFather](https://t.me/botfather) 对话，发送 `/newbot` 获取 **Bot Token**；
+   - 在 Telegram 中与 [@userinfobot](https://t.me/userinfobot) 对话，获取自己的纯数字 **User ID**（用于防止他人越权使用）。
+2. **Anki 桌面端配置**：
+   - 打开电脑上的 Anki 桌面端 $\to$ 点击菜单栏 **工具 $\to$ 附加组件 $\to$ 获取附加组件**；
+   - 输入安装代码 `2055492159`（安装官方 **AnkiConnect** 插件）；
+   - 在 Anki 首选项中登录您的 AnkiWeb 账号，首次配置时保持 Anki 打开。
 
 ---
 
-### Track 1: AI Agent Autonomous Deployment (Recommended)
+### 部署方式 A：AI 智能体全自主托管部署（推荐）
 
-If you use an AI terminal assistant (**Codex CLI**, **Google Antigravity**, or **Claude Code**), open your terminal in the cloned directory and run:
+如果您平时使用终端 AI 助手（**Google Antigravity**、**OpenAI Codex** 或 **Claude Code**），进入克隆目录执行对应命令即可：
 
 ```bash
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 
-# With Google Antigravity:
+# 使用 Google Antigravity：
 agy run AI_SETUP_PROMPT.md
 
-# Or with OpenAI Codex:
+# 使用 OpenAI Codex：
 codex exec "根据 AI_SETUP_PROMPT.md 帮我配置并部署本仓库"
 
-# Or with Anthropic Claude Code:
+# 使用 Anthropic Claude Code：
 claude -p "Please configure and deploy this repo according to AI_SETUP_PROMPT.md"
 ```
 
-The AI Agent will strictly follow the [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) state machine: diagnose your environment, create a sandboxed virtual environment, ask for your essential credentials once, run physical probe tests, and register the auto-start background service using verified templates.
+AI 智能体将严格执行 [AI_SETUP_PROMPT.md](AI_SETUP_PROMPT.md) 状态机：诊断物理环境、初始化隔离沙盒 `.venv`、询问必要凭证一次、运行物理探针并注册开机自启守护服务。
 
 ---
 
-### Track 2: Native 1-Click Installer
+### 部署方式 B：原生 1 键交互向导部署
 
-If you prefer a direct script without an AI CLI:
+如果您不使用 AI 命令行，可直接运行系统配套脚本：
 
-#### On macOS / Linux:
+#### macOS / Linux：
 ```bash
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 ./install.sh
 ```
 
-#### On Windows:
+#### Windows：
 ```cmd
 git clone https://github.com/chase-yuan/anki-context-miner.git
 cd anki-context-miner
 install.bat
 ```
 
-The installer will:
-1. Create an isolated `.venv` virtual environment (leaving your global system Python untouched).
-2. Install all dependencies from `requirements.txt`.
-3. Launch the interactive `setup_wizard.py` to verify AnkiConnect, test Telegram bot tokens, and install the background service.
+向导将自动完成：
+1. 创建独立的 `.venv` 虚拟环境，确保不影响系统全局 Python 环境；
+2. 安装 `requirements.txt` 所需的全部依赖；
+3. 交互式录入 Token 与 API Key，运行网络与 AnkiConnect 连通性测试；
+4. 询问并自动注册开机静默启动守护服务。
 
 ---
 
-## 5. Background Service Management
+## 5. 后台守护服务管理
 
-The system runs completely silently in the background:
+系统支持全天候静默后台运行：
 
 ### macOS (`launchd`)
-- **Status check**: `python3 setup_wizard.py --check-only`
-- **Manual install**: `python3 setup_wizard.py --install-service`
-- **Logs**: `bot.log` and `bot_err.log` inside the repository directory.
+- **状态检查**：`python3 setup_wizard.py --check-only`
+- **重新注册服务**：`python3 setup_wizard.py --install-service`
+- **运行日志**：仓库目录下的 `bot.log` 与 `bot_err.log`
 
-### Windows (Startup VBS + Task Scheduler)
-- **Automatic run**: The installer registers `anki_video_miner_hidden.vbs` in your Windows Startup folder (`shell:startup`). It launches on login with **zero black console window**.
-- **Manual run**: Double-click `run_bot.bat`.
+### Windows (启动目录 VBS + 任务调度)
+- **开机自动运行**：安装器自动将 `anki_video_miner_hidden.vbs` 注册至 Windows 启动目录（`shell:startup`），开机静默常驻，**无任何黑框弹出**；
+- **手动启动**：直接双击项目根目录下的 `run_bot.bat`。
 
 ---
 
-## 6. Telegram Usage Commands
+## 6. Telegram 移动端交互指令全景表
 
-| User Message | Action Performed | Response |
+| 发送内容 | 执行动作 | 机器人回复 |
 | :--- | :--- | :--- |
-| `https://youtube.com/watch?v=...` | Extracts video subtitles and runs C1/C2 lexicographical mining | Returns numbered candidates with IPA, POS, and Chinese definition |
-| `https://bilibili.com/video/BV...` | Extracts Bilibili subtitles/audio and generates study monograph | Returns lecture notes and saves to Obsidian |
-| `When considering the evolution...` (or `文本: [内容]`) | Mines C1/C2 vocabulary directly from text or article paragraph | Stages numbered candidates for Anki selection |
-| Drag & drop `.txt` or `.md` file | Parses text document and extracts high-register vocabulary | Stages candidates with document title metadata |
-| `1 3 5` or `all` or `前3个` | Instantly injects selected items into Anki with audio | Adds Cloze cards and triggers AnkiWeb cloud sync |
-| `把讲多巴胺的词存入anki` | Natural language selection via semantic intent agent | Identifies target items and injects directly |
-| `再帮我多挖几个地道习语` | Continues mining deeper idiomatic phrases from same source | Returns new non-overlapping candidate batch |
-| `刚才内容里讲的核心论据是什么？` | Discusses transcript/article directly | Returns concise synthesis based on local content cache |
-| `/shot` | Captures primary Mac / Windows screen | Sends screenshot back to phone |
-| `/status` | Reads CPU, memory, and disk health | Returns hardware status summary |
-| `/sync` | Triggers manual AnkiWeb sync | Syncs collection to cloud |
+| `https://youtube.com/watch?v=...` | 自动抓取字幕并执行高阶生词与短语提炼 | 返回带音标、词性、中文释义的待选词汇表 |
+| `https://bilibili.com/video/BV...` | 提取 B 站字幕/音频并执行深度精读 | 返回结构化长笔记，并自动落盘本地知识库 |
+| 英文长段落（或 `文本: [内容]`） | 自动分析句子与段落，提炼 C1/C2 词汇与搭配 | 暂存待选词条，生成预览序号 |
+| 拖拽上传 `.txt` 或 `.md` 文件 | 全文文本解析与高阶词汇萃取 | 关联文件名生成候选生词库 |
+| `1 3 5` 或 `all` 或 `前3个` | 选定词汇一键注入本地 Anki（含神经发音） | 写入完形填空卡片并触发云端即时同步 |
+| `把讲多巴胺的词存入anki` | 语义意图理解与目标词汇筛选 | 自动识别匹配项并直接注入 Anki |
+| `再帮我多挖几个地道习语` | 针对当前文本/视频进行二次深度挖掘 | 返回新一轮不重复的短语搭配表 |
+| `刚才内容里讲的核心论据是什么？` | 基于上下文缓存进行互动答疑 | 给出精准的技术提炼或论据总结 |
+| `/shot` | 拍摄当前 Mac / Windows 物理桌面屏幕 | 将高清截图即时回传到手机端 |
+| `/status` | 读取宿主机 CPU、内存与磁盘占用 | 返回硬件运行状态摘要 |
+| `/sync` | 手动触发 AnkiWeb 云端同步指令 | 同步本地卡包至 AnkiWeb 服务器 |
 
 ---
 
-## 7. Mobile Dark Mode & Typography Specification
+## 7. 卡片排版与视觉规范
 
-Cards generated by Anki Video Miner follow **Aesthetic Principle Zero**:
+生成的卡片严格遵循极简美学规范：
 
-- **Font Hierarchy**: Native system serif & sans-serif stack (`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`).
-- **Contrast Adaptation**: Automatically detects iOS AnkiMobile and Android AnkiDroid dark themes via `@media (prefers-color-scheme: dark)` and `.nightMode` classes.
-- **Pill Container**: Examples are isolated in subtle `#27272a` (dark) or `#f8fafc` (light) rounded containers rather than harsh borders or nested boxes.
-- **Zero Icons/Emojis**: Priority is communicated strictly through typographic weight and design tokens.
-
----
-
-## 8. Architecture Decisions & Methodology
-
-This project follows structured Architecture Decision Records (ADR):
-- **[ADR 0001: Cross-Platform AI-Driven Deployment Architecture](docs/adr/0001-cross-platform-ai-deployment-architecture.md)**: Formal record of the essential vs accidental complexity boundary, strict templating invariants, and dual-track onboarding design.
+- **字体梯度**：采用原生系统无衬线与衬线字体栈（`-apple-system`, `BlinkMacSystemFont`, `Segoe UI`）；
+- **深浅自适应**：通过 `@media (prefers-color-scheme: dark)` 与 `.nightMode` 原生自适应 iOS AnkiMobile 与 Android AnkiDroid 的纯黑暗黑主题；
+- **胶囊化容器**：例句与发音区域置于浅灰 `#f8fafc` 或深灰 `#27272a` 的微圆角区域内，摒弃粗暴的高饱和度线条与嵌套方框；
+- **零冗余装饰**：杜绝装饰性 Emoji 堆砌，完全依托字阶、字重与留白构建清晰认知层级。
 
 ---
 
-## 9. License
+## 8. 架构决策记录 (ADR)
 
-This project is licensed under the [MIT License](LICENSE).
+本项目遵循标准架构决策记录（Architecture Decision Records）：
+- [**ADR 0001: 跨平台 AI 驱动部署架构**](docs/adr/0001-cross-platform-ai-deployment-architecture.md)：记录本质复杂度与附带复杂度的划分、模板插值约束与双轨部署设计。
+
+---
+
+## 9. 开源协议
+
+本项目基于 [MIT License](LICENSE) 协议完全开源。
